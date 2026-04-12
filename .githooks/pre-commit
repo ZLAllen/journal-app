@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+repo_root=$(git rev-parse --show-toplevel)
+
 echo "Running cargo fmt --all -- --check in src-tauri..."
-cd src-tauri
+cd "$repo_root/src-tauri"
 cargo fmt --all -- --check
