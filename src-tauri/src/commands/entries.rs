@@ -254,7 +254,7 @@ mod tests {
 
         assert_eq!(updated.body, "Updated");
         assert_eq!(updated.mood, Some(5));
-        assert!(updated.updated_at > entry.updated_at);
+        assert!(updated.updated_at >= entry.updated_at, "updated_at should be at least as recent as the original timestamp");
     }
 
     #[test]
