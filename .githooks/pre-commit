@@ -1,0 +1,6 @@
+#!/bin/sh
+set -e
+
+echo "Running cargo fmt --all -- --check in src-tauri..."
+cd src-tauri
+cargo fmt --all -- --check
