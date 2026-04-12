@@ -1,0 +1,35 @@
+{
+  "productName": "Journal App",
+  "identifier": "com.journal.app",
+  "app": {
+    "windows": [
+      {
+        "title": "Journal App",
+        "width": 1200,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false,
+        "minimizable": true,
+        "maximizable": true,
+        "closable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "build": {
+    "beforeDevCommand": "",
+    "beforeBuildCommand": "",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
+  },
+  "bundle": {
+    "active": false,
+    "icon": [],
+    "targets": [
+      "deb",
+      "appimage"
+    ]
+  }
+}
