@@ -48,15 +48,15 @@ fn integration_tags_assignment_flow() {
     tags::assign_tag_to_entry(&db, entry.id.clone(), tag2.id.clone())
         .expect("assign_tag_to_entry should succeed");
 
-    let entry_tags = tags::get_tags_for_entry(&db, entry.id.clone())
-        .expect("get_tags_for_entry should succeed");
+    let entry_tags =
+        tags::get_tags_for_entry(&db, entry.id.clone()).expect("get_tags_for_entry should succeed");
     assert_eq!(entry_tags.len(), 2);
 
     tags::remove_tag_from_entry(&db, entry.id.clone(), tag1.id.clone())
         .expect("remove_tag_from_entry should succeed");
 
-    let entry_tags_after_remove = tags::get_tags_for_entry(&db, entry.id)
-        .expect("get_tags_for_entry should succeed");
+    let entry_tags_after_remove =
+        tags::get_tags_for_entry(&db, entry.id).expect("get_tags_for_entry should succeed");
     assert_eq!(entry_tags_after_remove.len(), 1);
     assert_eq!(entry_tags_after_remove[0].name, "reflection");
 }

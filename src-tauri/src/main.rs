@@ -32,10 +32,7 @@ fn create_entry(
     payload: CreateEntryPayload,
     state: State<'_, AppState>,
 ) -> Result<models::Entry, String> {
-    let db_guard = state
-        .db
-        .lock()
-        .map_err(|e| format!("Lock error: {}", e))?;
+    let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
 
     commands::entries::create_entry(&db_guard, payload.body, payload.mood)
         .map_err(|e| format!("Failed to create entry: {}", e))
@@ -43,10 +40,7 @@ fn create_entry(
 
 #[tauri::command]
 fn get_entries(state: State<'_, AppState>) -> Result<Vec<models::Entry>, String> {
-    let db_guard = state
-        .db
-        .lock()
-        .map_err(|e| format!("Lock error: {}", e))?;
+    let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
 
     commands::entries::get_entries(&db_guard).map_err(|e| format!("Failed to get entries: {}", e))
 }
@@ -56,10 +50,7 @@ fn update_entry(
     payload: UpdateEntryPayload,
     state: State<'_, AppState>,
 ) -> Result<models::Entry, String> {
-    let db_guard = state
-        .db
-        .lock()
-        .map_err(|e| format!("Lock error: {}", e))?;
+    let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
 
     commands::entries::update_entry(&db_guard, payload.id, payload.body, payload.mood)
         .map_err(|e| format!("Failed to update entry: {}", e))
@@ -67,12 +58,10 @@ fn update_entry(
 
 #[tauri::command]
 fn delete_entry(id: String, state: State<'_, AppState>) -> Result<(), String> {
-    let db_guard = state
-        .db
-        .lock()
-        .map_err(|e| format!("Lock error: {}", e))?;
+    let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
 
-    commands::entries::delete_entry(&db_guard, id).map_err(|e| format!("Failed to delete entry: {}", e))
+    commands::entries::delete_entry(&db_guard, id)
+        .map_err(|e| format!("Failed to delete entry: {}", e))
 }
 
 #[tauri::command]
@@ -80,20 +69,15 @@ fn create_tag(
     payload: CreateTagPayload,
     state: State<'_, AppState>,
 ) -> Result<models::Tag, String> {
-    let db_guard = state
-        .db
-        .lock()
-        .map_err(|e| format!("Lock error: {}", e))?;
+    let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
 
-    commands::tags::create_tag(&db_guard, payload.name).map_err(|e| format!("Failed to create tag: {}", e))
+    commands::tags::create_tag(&db_guard, payload.name)
+        .map_err(|e| format!("Failed to create tag: {}", e))
 }
 
 #[tauri::command]
 fn get_all_tags(state: State<'_, AppState>) -> Result<Vec<models::Tag>, String> {
-    let db_guard = state
-        .db
-        .lock()
-        .map_err(|e| format!("Lock error: {}", e))?;
+    let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
 
     commands::tags::get_all_tags(&db_guard).map_err(|e| format!("Failed to get tags: {}", e))
 }
@@ -103,10 +87,7 @@ fn get_tags_for_entry(
     entry_id: String,
     state: State<'_, AppState>,
 ) -> Result<Vec<models::Tag>, String> {
-    let db_guard = state
-        .db
-        .lock()
-        .map_err(|e| format!("Lock error: {}", e))?;
+    let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
 
     commands::tags::get_tags_for_entry(&db_guard, entry_id)
         .map_err(|e| format!("Failed to get tags: {}", e))
@@ -118,10 +99,7 @@ fn assign_tag_to_entry(
     tag_id: String,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let db_guard = state
-        .db
-        .lock()
-        .map_err(|e| format!("Lock error: {}", e))?;
+    let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
 
     commands::tags::assign_tag_to_entry(&db_guard, entry_id, tag_id)
         .map_err(|e| format!("Failed to assign tag: {}", e))
@@ -133,10 +111,7 @@ fn remove_tag_from_entry(
     tag_id: String,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let db_guard = state
-        .db
-        .lock()
-        .map_err(|e| format!("Lock error: {}", e))?;
+    let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
 
     commands::tags::remove_tag_from_entry(&db_guard, entry_id, tag_id)
         .map_err(|e| format!("Failed to remove tag: {}", e))

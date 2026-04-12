@@ -71,11 +71,12 @@ pub fn decrypt_data(ciphertext: &[u8], passphrase: &str) -> Result<Vec<u8>> {
 
 /// Get the config directory for storing salt
 pub fn get_config_dir() -> Result<PathBuf> {
-    let config_dir = dirs::config_dir()
-        .ok_or_else(|| AppError::Io(std::io::Error::new(
+    let config_dir = dirs::config_dir().ok_or_else(|| {
+        AppError::Io(std::io::Error::new(
             std::io::ErrorKind::NotFound,
             "Could not determine config directory",
-        )))?;
+        ))
+    })?;
 
     let journal_config = config_dir.join("journal");
     fs::create_dir_all(&journal_config)?;
@@ -112,31 +113,37 @@ mod tests {
         let passphrase = "test_passphrase_123";
         let salt = "some_test_salt_value";
 
-        let (key1, _) = derive_key_from_passphrase(passphrase, Some(salt))
-            .expect("First derivation failed");
-        let (key2, _) = derive_key_from_passphrase(passphrase, Some(salt))
-            .expect("Second derivation failed");
+        let (key1, _) =
+            derive_key_from_passphrase(passphrase, Some(salt)).expect("First derivation failed");
+        let (key2, _) =
+            derive_key_from_passphrase(passphrase, Some(salt)).expect("Second derivation failed");
 
-        assert_eq!(key1, key2, "Keys should be identical with same passphrase and salt");
+        assert_eq!(
+            key1, key2,
+            "Keys should be identical with same passphrase and salt"
+        );
     }
 
     #[test]
     fn test_different_passphrases_produce_different_keys() {
         let salt = "same_salt";
-        let (key1, _) = derive_key_from_passphrase("passphrase1", Some(salt))
-            .expect("First derivation failed");
+        let (key1, _) =
+            derive_key_from_passphrase("passphrase1", Some(salt)).expect("First derivation failed");
         let (key2, _) = derive_key_from_passphrase("passphrase2", Some(salt))
             .expect("Second derivation failed");
 
-        assert_ne!(key1, key2, "Different passphrases should produce different keys");
+        assert_ne!(
+            key1, key2,
+            "Different passphrases should produce different keys"
+        );
     }
 
     #[test]
     fn test_random_salt_generation() {
-        let (_, salt1) = derive_key_from_passphrase("password", None)
-            .expect("First salt generation failed");
-        let (_, salt2) = derive_key_from_passphrase("password", None)
-            .expect("Second salt generation failed");
+        let (_, salt1) =
+            derive_key_from_passphrase("password", None).expect("First salt generation failed");
+        let (_, salt2) =
+            derive_key_from_passphrase("password", None).expect("Second salt generation failed");
 
         assert_ne!(salt1, salt2, "Random salts should be different");
     }

@@ -1,15 +1,15 @@
-use serde::{Deserialize, Serialize};
 use chrono::Utc;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Represents a single journal entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Entry {
     pub id: String,
-    pub created_at: i64,        // Unix timestamp in milliseconds
-    pub updated_at: i64,        // Unix timestamp in milliseconds
-    pub body: String,           // Rich text content (HTML or Markdown)
-    pub mood: Option<i32>,      // 1-5 scale, nullable
+    pub created_at: i64,   // Unix timestamp in milliseconds
+    pub updated_at: i64,   // Unix timestamp in milliseconds
+    pub body: String,      // Rich text content (HTML or Markdown)
+    pub mood: Option<i32>, // 1-5 scale, nullable
     pub pinned: bool,
     pub deleted_at: Option<i64>, // Soft delete timestamp
 }

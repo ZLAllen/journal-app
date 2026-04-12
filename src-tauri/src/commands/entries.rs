@@ -4,13 +4,9 @@ use chrono::Utc;
 use rusqlite::params;
 
 /// Create a new journal entry
-pub fn create_entry(
-    db: &DbConnection,
-    body: String,
-    mood: Option<i32>,
-) -> Result<Entry> {
+pub fn create_entry(db: &DbConnection, body: String, mood: Option<i32>) -> Result<Entry> {
     let entry = Entry::new(body.clone(), mood);
-    
+
     let conn = db.conn();
     conn.execute(
         "INSERT INTO entries (id, created_at, updated_at, body, mood, pinned, deleted_at)
@@ -227,8 +223,8 @@ mod tests {
     #[test]
     fn test_create_entry() {
         let db = setup_db();
-        let entry = create_entry(&db, "Test entry".to_string(), Some(4))
-            .expect("Failed to create entry");
+        let entry =
+            create_entry(&db, "Test entry".to_string(), Some(4)).expect("Failed to create entry");
 
         assert!(!entry.id.is_empty());
         assert_eq!(entry.body, "Test entry");
@@ -250,8 +246,8 @@ mod tests {
     #[test]
     fn test_update_entry() {
         let db = setup_db();
-        let entry = create_entry(&db, "Original".to_string(), Some(2))
-            .expect("Failed to create entry");
+        let entry =
+            create_entry(&db, "Original".to_string(), Some(2)).expect("Failed to create entry");
 
         let updated = update_entry(&db, entry.id.clone(), "Updated".to_string(), Some(5))
             .expect("Failed to update entry");
@@ -264,24 +260,28 @@ mod tests {
     #[test]
     fn test_delete_entry() {
         let db = setup_db();
-        let entry = create_entry(&db, "To delete".to_string(), None)
-            .expect("Failed to create entry");
+        let entry =
+            create_entry(&db, "To delete".to_string(), None).expect("Failed to create entry");
 
         delete_entry(&db, entry.id.clone()).expect("Failed to delete entry");
 
         let retrieved = get_entry(&db, entry.id).expect("Failed to retrieve entry");
-        assert!(retrieved.is_none(), "Deleted entry should not be retrievable");
+        assert!(
+            retrieved.is_none(),
+            "Deleted entry should not be retrievable"
+        );
     }
 
     #[test]
     fn test_set_pinned() {
         let db = setup_db();
-        let entry = create_entry(&db, "Pinnable entry".to_string(), None)
-            .expect("Failed to create entry");
+        let entry =
+            create_entry(&db, "Pinnable entry".to_string(), None).expect("Failed to create entry");
 
         set_pinned(&db, entry.id.clone(), true).expect("Failed to set pinned");
 
-        let updated = get_entry(&db, entry.id).expect("Failed to retrieve")
+        let updated = get_entry(&db, entry.id)
+            .expect("Failed to retrieve")
             .expect("Entry should exist");
         assert!(updated.pinned);
     }
@@ -289,10 +289,10 @@ mod tests {
     #[test]
     fn test_get_pinned_entries() {
         let db = setup_db();
-        let entry1 = create_entry(&db, "Entry 1".to_string(), None)
-            .expect("Failed to create entry");
-        let _entry2 = create_entry(&db, "Entry 2".to_string(), None)
-            .expect("Failed to create entry");
+        let entry1 =
+            create_entry(&db, "Entry 1".to_string(), None).expect("Failed to create entry");
+        let _entry2 =
+            create_entry(&db, "Entry 2".to_string(), None).expect("Failed to create entry");
 
         set_pinned(&db, entry1.id, true).unwrap();
 
