@@ -3,6 +3,24 @@ use rusqlite::Connection;
 
 pub mod schema;
 
+fn is_malformed_error(error: &rusqlite::Error) -> bool {
+    match error {
+        rusqlite::Error::SqliteFailure(code, message) => {
+            if code.extended_code == rusqlite::ffi::SQLITE_CORRUPT
+                || code.extended_code == rusqlite::ffi::SQLITE_CORRUPT_VTAB
+            {
+                return true;
+            }
+
+            message.as_deref().is_some_and(|details| {
+                let lower = details.to_ascii_lowercase();
+                lower.contains("malformed") || lower.contains("corrupt")
+            })
+        }
+        _ => false,
+    }
+}
+
 /// Database connection wrapper
 pub struct DbConnection {
     conn: Connection,
@@ -18,6 +36,8 @@ impl DbConnection {
 
         let db = DbConnection { conn };
         db.run_migrations()?;
+        db.repair_search_index_if_needed()?;
+        db.validate_integrity()?;
         Ok(db)
     }
 
@@ -28,6 +48,8 @@ impl DbConnection {
 
         let db = DbConnection { conn };
         db.run_migrations()?;
+        db.repair_search_index_if_needed()?;
+        db.validate_integrity()?;
         Ok(db)
     }
 
@@ -65,6 +87,67 @@ impl DbConnection {
         }
 
         Ok(())
+    }
+
+    fn validate_integrity(&self) -> Result<()> {
+        let quick_check: String = self
+            .conn
+            .query_row("PRAGMA quick_check", [], |row| row.get(0))?;
+
+        if quick_check.to_lowercase() != "ok" {
+            return Err(crate::models::AppError::CorruptDatabase(quick_check));
+        }
+
+        self.validate_search_index()?;
+
+        Ok(())
+    }
+
+    fn validate_search_index(&self) -> Result<()> {
+        // FTS5 integrity-check returns result rows; use prepare+query to consume
+        // them so rusqlite does not raise ExecuteReturnedResults.
+        let mut stmt = self
+            .conn
+            .prepare("INSERT INTO entries_fts(entries_fts) VALUES('integrity-check')")?;
+        let mut rows = stmt.query([])?;
+        while let Some(row) = rows.next()? {
+            let result: String = row.get(0)?;
+            if result.to_lowercase() != "ok" {
+                return Err(crate::models::AppError::CorruptDatabase(result));
+            }
+        }
+
+        Ok(())
+    }
+
+    fn rebuild_search_index(&self) -> Result<()> {
+        self.conn
+            .execute("INSERT INTO entries_fts(entries_fts) VALUES('rebuild')", [])?;
+        self.validate_search_index()
+    }
+
+    fn repair_search_index_if_needed(&self) -> Result<()> {
+        match self.validate_search_index() {
+            Ok(()) => Ok(()),
+            Err(crate::models::AppError::Database(error)) if is_malformed_error(&error) => {
+                self.rebuild_search_index()
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    pub fn run_with_search_index_repair<T, F>(&self, operation: F) -> Result<T>
+    where
+        F: Fn(&Connection) -> Result<T>,
+    {
+        match operation(&self.conn) {
+            Ok(value) => Ok(value),
+            Err(crate::models::AppError::Database(error)) if is_malformed_error(&error) => {
+                self.rebuild_search_index()?;
+                operation(&self.conn)
+            }
+            Err(error) => Err(error),
+        }
     }
 
     /// Get the underlying connection reference
@@ -164,5 +247,21 @@ mod tests {
             .expect("Failed to check entry_tags table");
 
         assert_eq!(entry_tags_exist, 1, "entry_tags table should exist");
+    }
+
+    #[test]
+    fn test_search_index_triggers_exist() {
+        let db = DbConnection::new_memory().expect("Failed to create in-memory DB");
+
+        let trigger_count: i32 = db
+            .conn()
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='trigger' AND name LIKE 'entries_%_fts'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("Failed to check FTS triggers");
+
+        assert_eq!(trigger_count, 3, "FTS maintenance triggers should exist");
     }
 }

@@ -15,5 +15,13 @@ pub fn get_migrations() -> Vec<Migration> {
             name: "002_fts5_index",
             sql: include_str!("../../../migrations/002_fts5_index.sql"),
         },
+        Migration {
+            name: "003_fts5_triggers",
+            sql: include_str!("../../../migrations/003_fts5_triggers.sql"),
+        },
+        Migration {
+            name: "004_entry_title",
+            sql: include_str!("../../../migrations/004_entry_title.sql"),
+        },
     ]
 }

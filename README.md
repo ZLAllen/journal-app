@@ -56,3 +56,9 @@ npm run tauri dev
 - Data models in `models.rs` with serde derives
 - CRUD commands for entries and tag assignment helpers
 - Unit and integration tests for backend functionality
+
+## Recent MVP Additions
+
+- Entry titles are now first-class data and can be edited directly in the editor.
+- Timeline cards show entry titles instead of body previews.
+- Autosave now shows pending progress and active save status in the editor panel.

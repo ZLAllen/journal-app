@@ -171,12 +171,12 @@ Stand up the project skeleton and core data layer. No UI yet.
 
 Build the two primary screens a user will spend most time in.
 
-- [ ] Timeline view: list entries in reverse chronological order, show date, first line of body, mood indicator, and tags
-- [ ] Entry editor: integrate a rich text editor (Tiptap via npm) inside the webview; support bold, italic, headings, and bullet lists
-- [ ] Auto-save: debounce writes to the backend every 5 seconds while the editor is active
-- [ ] Backdating: allow the user to change the `created_at` date on any entry
-- [ ] Mood selector: 1–5 scale displayed as simple icons in the editor toolbar
-- [ ] Basic tag input: add and remove tags on an entry
+- [x] Timeline view: list entries in reverse chronological order, show date, first line of body, mood indicator, and tags
+- [x] Entry editor: integrate a rich text editor (Tiptap via npm) inside the webview; support bold, italic, headings, and bullet lists
+- [x] Auto-save: debounce writes to the backend every 5 seconds while the editor is active
+- [x] Backdating: allow the user to change the `created_at` date on any entry
+- [x] Mood selector: 1–5 scale displayed as simple icons in the editor toolbar
+- [x] Basic tag input: add and remove tags on an entry
 
 **Deliverable:** User can open the app, write entries, and see them listed on the timeline.
 
