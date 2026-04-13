@@ -76,18 +76,7 @@ pub fn update_entry(
             "SELECT id, created_at, updated_at, title, body, mood, pinned, deleted_at FROM entries WHERE id = ?1",
         )?;
 
-        let entry = stmt.query_row(params![&id], |row| {
-            Ok(Entry::from_row(
-                row.get(0)?,
-                row.get(1)?,
-                row.get(2)?,
-                row.get(3)?,
-                row.get(4)?,
-                row.get(5)?,
-                row.get(6)?,
-                row.get(7)?,
-            ))
-        })?;
+        let entry = stmt.query_row(params![&id], |row| Entry::try_from(row))?;
 
         Ok(entry)
     })?;
@@ -128,18 +117,7 @@ pub fn get_entries(db: &DbConnection) -> Result<Vec<Entry>> {
          ORDER BY created_at DESC",
     )?;
 
-    let entries = stmt.query_map([], |row| {
-        Ok(Entry::from_row(
-            row.get(0)?,
-            row.get(1)?,
-            row.get(2)?,
-            row.get(3)?,
-            row.get(4)?,
-            row.get(5)?,
-            row.get(6)?,
-            row.get(7)?,
-        ))
-    })?;
+    let entries = stmt.query_map([], |row| Entry::try_from(row))?;
 
     let mut result = Vec::new();
     for entry in entries {
@@ -158,18 +136,7 @@ pub fn get_entry(db: &DbConnection, id: String) -> Result<Option<Entry>> {
          WHERE id = ?1 AND deleted_at IS NULL",
     )?;
 
-    let entry = stmt.query_row(params![&id], |row| {
-        Ok(Entry::from_row(
-            row.get(0)?,
-            row.get(1)?,
-            row.get(2)?,
-            row.get(3)?,
-            row.get(4)?,
-            row.get(5)?,
-            row.get(6)?,
-            row.get(7)?,
-        ))
-    });
+    let entry = stmt.query_row(params![&id], |row| Entry::try_from(row));
 
     match entry {
         Ok(e) => Ok(Some(e)),
@@ -206,18 +173,7 @@ pub fn get_pinned_entries(db: &DbConnection) -> Result<Vec<Entry>> {
          ORDER BY created_at DESC",
     )?;
 
-    let entries = stmt.query_map([], |row| {
-        Ok(Entry::from_row(
-            row.get(0)?,
-            row.get(1)?,
-            row.get(2)?,
-            row.get(3)?,
-            row.get(4)?,
-            row.get(5)?,
-            row.get(6)?,
-            row.get(7)?,
-        ))
-    })?;
+    let entries = stmt.query_map([], |row| Entry::try_from(row))?;
 
     let mut result = Vec::new();
     for entry in entries {

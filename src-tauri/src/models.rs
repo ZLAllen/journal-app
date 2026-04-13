@@ -1,4 +1,5 @@
 use chrono::Utc;
+use rusqlite::Row;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -43,27 +44,22 @@ impl Entry {
             deleted_at: None,
         }
     }
+}
 
-    pub fn from_row(
-        id: String,
-        created_at: i64,
-        updated_at: i64,
-        title: String,
-        body: String,
-        mood: Option<i32>,
-        pinned: i32,
-        deleted_at: Option<i64>,
-    ) -> Self {
-        Self {
-            id,
-            created_at,
-            updated_at,
-            title,
-            body,
-            mood,
-            pinned: pinned != 0,
-            deleted_at,
-        }
+impl TryFrom<&Row<'_>> for Entry {
+    type Error = rusqlite::Error;
+
+    fn try_from(row: &Row<'_>) -> std::result::Result<Self, Self::Error> {
+        Ok(Self {
+            id: row.get(0)?,
+            created_at: row.get(1)?,
+            updated_at: row.get(2)?,
+            title: row.get(3)?,
+            body: row.get(4)?,
+            mood: row.get(5)?,
+            pinned: row.get::<_, i32>(6)? != 0,
+            deleted_at: row.get(7)?,
+        })
     }
 }
 
