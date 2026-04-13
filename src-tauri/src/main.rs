@@ -1,7 +1,9 @@
 use journal::commands;
 use journal::db::DbConnection;
 use journal::models;
+use std::fs;
 use std::sync::Mutex;
+use tauri::Manager;
 use tauri::State;
 
 /// Application state holding the database connection
@@ -11,6 +13,7 @@ struct AppState {
 
 #[derive(serde::Serialize, serde::Deserialize)]
 struct CreateEntryPayload {
+    title: String,
     body: String,
     mood: Option<i32>,
 }
@@ -18,8 +21,10 @@ struct CreateEntryPayload {
 #[derive(serde::Serialize, serde::Deserialize)]
 struct UpdateEntryPayload {
     id: String,
+    title: String,
     body: String,
     mood: Option<i32>,
+    created_at: Option<i64>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -34,7 +39,7 @@ fn create_entry(
 ) -> Result<models::Entry, String> {
     let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
 
-    commands::entries::create_entry(&db_guard, payload.body, payload.mood)
+    commands::entries::create_entry(&db_guard, payload.title, payload.body, payload.mood)
         .map_err(|e| format!("Failed to create entry: {}", e))
 }
 
@@ -52,8 +57,15 @@ fn update_entry(
 ) -> Result<models::Entry, String> {
     let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
 
-    commands::entries::update_entry(&db_guard, payload.id, payload.body, payload.mood)
-        .map_err(|e| format!("Failed to update entry: {}", e))
+    commands::entries::update_entry(
+        &db_guard,
+        payload.id,
+        payload.title,
+        payload.body,
+        payload.mood,
+        payload.created_at,
+    )
+    .map_err(|e| format!("Failed to update entry: {}", e))
 }
 
 #[tauri::command]
@@ -118,12 +130,24 @@ fn remove_tag_from_entry(
 }
 
 fn main() {
-    let db = DbConnection::new("journal.db").expect("Failed to initialize database");
-    let app_state = AppState { db: Mutex::new(db) };
-
     tauri::Builder::default()
-        .manage(app_state)
-        .setup(|_| Ok(()))
+        .setup(|app| {
+            let app_data_dir = app
+                .path()
+                .app_data_dir()
+                .map_err(|e| format!("Failed to resolve app data directory: {}", e))?;
+
+            fs::create_dir_all(&app_data_dir)
+                .map_err(|e| format!("Failed to create app data directory: {}", e))?;
+
+            let db_path = app_data_dir.join("journal.db");
+            let db_path_string = db_path.to_string_lossy().to_string();
+            let db = DbConnection::new(&db_path_string)
+                .map_err(|e| format!("Failed to initialize database {}: {}", db_path_string, e))?;
+
+            app.manage(AppState { db: Mutex::new(db) });
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             create_entry,
             get_entries,

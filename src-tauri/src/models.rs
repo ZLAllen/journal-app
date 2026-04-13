@@ -6,8 +6,9 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Entry {
     pub id: String,
-    pub created_at: i64,   // Unix timestamp in milliseconds
-    pub updated_at: i64,   // Unix timestamp in milliseconds
+    pub created_at: i64, // Unix timestamp in milliseconds
+    pub updated_at: i64, // Unix timestamp in milliseconds
+    pub title: String,
     pub body: String,      // Rich text content (HTML or Markdown)
     pub mood: Option<i32>, // 1-5 scale, nullable
     pub pinned: bool,
@@ -29,12 +30,13 @@ pub struct EntryTag {
 }
 
 impl Entry {
-    pub fn new(body: String, mood: Option<i32>) -> Self {
+    pub fn new(title: String, body: String, mood: Option<i32>) -> Self {
         let now = Utc::now().timestamp_millis();
         Self {
             id: Uuid::new_v4().to_string(),
             created_at: now,
             updated_at: now,
+            title,
             body,
             mood,
             pinned: false,
@@ -46,6 +48,7 @@ impl Entry {
         id: String,
         created_at: i64,
         updated_at: i64,
+        title: String,
         body: String,
         mood: Option<i32>,
         pinned: i32,
@@ -55,6 +58,7 @@ impl Entry {
             id,
             created_at,
             updated_at,
+            title,
             body,
             mood,
             pinned: pinned != 0,
@@ -81,6 +85,9 @@ impl Tag {
 pub enum AppError {
     #[error("Database error: {0}")]
     Database(#[from] rusqlite::Error),
+
+    #[error("Database corruption detected: {0}")]
+    CorruptDatabase(String),
 
     #[error("Encryption error: {0}")]
     Encryption(String),

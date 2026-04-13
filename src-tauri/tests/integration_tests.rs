@@ -9,18 +9,27 @@ fn setup_db() -> DbConnection {
 fn integration_entry_crud_flow() {
     let db = setup_db();
 
-    let created = entries::create_entry(&db, "First integration entry".to_string(), Some(3))
-        .expect("create_entry should succeed");
+    let created = entries::create_entry(
+        &db,
+        "First integration title".to_string(),
+        "First integration entry".to_string(),
+        Some(3),
+    )
+    .expect("create_entry should succeed");
+    assert_eq!(created.title, "First integration title");
     assert_eq!(created.body, "First integration entry");
     assert_eq!(created.mood, Some(3));
 
     let updated = entries::update_entry(
         &db,
         created.id.clone(),
+        "Updated integration title".to_string(),
         "Updated integration entry".to_string(),
         Some(5),
+        None,
     )
     .expect("update_entry should succeed");
+    assert_eq!(updated.title, "Updated integration title");
     assert_eq!(updated.body, "Updated integration entry");
     assert_eq!(updated.mood, Some(5));
 
@@ -38,8 +47,13 @@ fn integration_entry_crud_flow() {
 fn integration_tags_assignment_flow() {
     let db = setup_db();
 
-    let entry = entries::create_entry(&db, "Taggable entry".to_string(), None)
-        .expect("create_entry should succeed");
+    let entry = entries::create_entry(
+        &db,
+        "Taggable entry".to_string(),
+        "Taggable body".to_string(),
+        None,
+    )
+    .expect("create_entry should succeed");
     let tag1 = tags::create_tag(&db, "work".to_string()).expect("create_tag should succeed");
     let tag2 = tags::create_tag(&db, "reflection".to_string()).expect("create_tag should succeed");
 
@@ -65,10 +79,15 @@ fn integration_tags_assignment_flow() {
 fn integration_deleted_entries_not_returned() {
     let db = setup_db();
 
-    let keep = entries::create_entry(&db, "Keep me".to_string(), None)
+    let keep = entries::create_entry(&db, "Keep me".to_string(), "Keep me body".to_string(), None)
         .expect("create_entry should succeed");
-    let remove = entries::create_entry(&db, "Delete me".to_string(), None)
-        .expect("create_entry should succeed");
+    let remove = entries::create_entry(
+        &db,
+        "Delete me".to_string(),
+        "Delete me body".to_string(),
+        None,
+    )
+    .expect("create_entry should succeed");
 
     entries::delete_entry(&db, remove.id).expect("delete_entry should succeed");
 

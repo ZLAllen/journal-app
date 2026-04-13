@@ -209,8 +209,13 @@ mod tests {
     #[test]
     fn test_assign_tag_to_entry() {
         let db = setup_db();
-        let entry = entries::create_entry(&db, "Test entry".to_string(), None)
-            .expect("Failed to create entry");
+        let entry = entries::create_entry(
+            &db,
+            "Test entry".to_string(),
+            "Test entry body".to_string(),
+            None,
+        )
+        .expect("Failed to create entry");
         let tag = create_tag(&db, "important".to_string()).expect("Failed to create tag");
 
         assign_tag_to_entry(&db, entry.id.clone(), tag.id.clone()).expect("Failed to assign tag");
@@ -223,8 +228,13 @@ mod tests {
     #[test]
     fn test_remove_tag_from_entry() {
         let db = setup_db();
-        let entry = entries::create_entry(&db, "Test entry".to_string(), None)
-            .expect("Failed to create entry");
+        let entry = entries::create_entry(
+            &db,
+            "Test entry".to_string(),
+            "Test entry body".to_string(),
+            None,
+        )
+        .expect("Failed to create entry");
         let tag = create_tag(&db, "important".to_string()).expect("Failed to create tag");
 
         assign_tag_to_entry(&db, entry.id.clone(), tag.id.clone()).unwrap();
@@ -237,8 +247,10 @@ mod tests {
     #[test]
     fn test_get_entries_with_tag() {
         let db = setup_db();
-        let entry1 = entries::create_entry(&db, "Entry 1".to_string(), None).unwrap();
-        let entry2 = entries::create_entry(&db, "Entry 2".to_string(), None).unwrap();
+        let entry1 =
+            entries::create_entry(&db, "Entry 1".to_string(), "Body 1".to_string(), None).unwrap();
+        let entry2 =
+            entries::create_entry(&db, "Entry 2".to_string(), "Body 2".to_string(), None).unwrap();
         let tag = create_tag(&db, "work".to_string()).unwrap();
 
         assign_tag_to_entry(&db, entry1.id.clone(), tag.id.clone()).unwrap();
