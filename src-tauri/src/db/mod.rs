@@ -104,10 +104,18 @@ impl DbConnection {
     }
 
     fn validate_search_index(&self) -> Result<()> {
-        self.conn.execute(
-            "INSERT INTO entries_fts(entries_fts) VALUES('integrity-check')",
-            [],
-        )?;
+        // FTS5 integrity-check returns result rows; use prepare+query to consume
+        // them so rusqlite does not raise ExecuteReturnedResults.
+        let mut stmt = self
+            .conn
+            .prepare("INSERT INTO entries_fts(entries_fts) VALUES('integrity-check')")?;
+        let mut rows = stmt.query([])?;
+        while let Some(row) = rows.next()? {
+            let result: String = row.get(0)?;
+            if result.to_lowercase() != "ok" {
+                return Err(crate::models::AppError::CorruptDatabase(result));
+            }
+        }
 
         Ok(())
     }

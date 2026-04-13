@@ -31,9 +31,10 @@ export const api = {
   createTag: (name: string) => invoke<Tag>('create_tag', { payload: { name } }),
   getAllTags: () => invoke<Tag[]>('get_all_tags'),
   getTagsForEntry: (entry_id: string) =>
-    invoke<Tag[]>('get_tags_for_entry', { entryId: entry_id }),
+    invoke<Tag[]>('get_tags_for_entry', { entry_id }),
   assignTagToEntry: (entry_id: string, tag_id: string) =>
-    invoke<void>('assign_tag_to_entry', { entryId: entry_id, tagId: tag_id }),
+    invoke<void>('assign_tag_to_entry', { entry_id, tag_id }),
   removeTagFromEntry: (entry_id: string, tag_id: string) =>
-    invoke<void>('remove_tag_from_entry', { entryId: entry_id, tagId: tag_id })
+    invoke<void>('remove_tag_from_entry', { entry_id, tag_id }),
+  getAllEntryTags: () => invoke<Record<string, Tag[]>>('get_all_entry_tags')
 };

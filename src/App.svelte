@@ -40,14 +40,10 @@
   }
 
   async function withTags(rawEntries: Entry[]): Promise<EntryWithTags[]> {
-    const taggedEntries = await Promise.all(
-      rawEntries.map(async (entry) => {
-        const tags = await api.getTagsForEntry(entry.id);
-        return { ...entry, tags };
-      })
-    );
-
-    return taggedEntries.sort((a, b) => b.created_at - a.created_at);
+    const entryTagsMap = await api.getAllEntryTags();
+    return rawEntries
+      .map((entry) => ({ ...entry, tags: entryTagsMap[entry.id] ?? [] }))
+      .sort((a, b) => b.created_at - a.created_at);
   }
 
   async function createNewEntry(): Promise<void> {

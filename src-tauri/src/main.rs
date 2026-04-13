@@ -1,6 +1,7 @@
 use journal::commands;
 use journal::db::DbConnection;
 use journal::models;
+use std::collections::HashMap;
 use std::fs;
 use std::sync::Mutex;
 use tauri::Manager;
@@ -129,6 +130,16 @@ fn remove_tag_from_entry(
         .map_err(|e| format!("Failed to remove tag: {}", e))
 }
 
+#[tauri::command]
+fn get_all_entry_tags(
+    state: State<'_, AppState>,
+) -> Result<HashMap<String, Vec<models::Tag>>, String> {
+    let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+    commands::tags::get_all_entry_tags(&db_guard)
+        .map_err(|e| format!("Failed to get entry tags: {}", e))
+}
+
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
@@ -158,6 +169,7 @@ fn main() {
             get_tags_for_entry,
             assign_tag_to_entry,
             remove_tag_from_entry,
+            get_all_entry_tags,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

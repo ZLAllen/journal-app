@@ -1,6 +1,7 @@
 use crate::db::DbConnection;
 use crate::models::{Result, Tag};
 use rusqlite::params;
+use std::collections::HashMap;
 
 /// Create a new tag
 pub fn create_tag(db: &DbConnection, name: String) -> Result<Tag> {
@@ -161,6 +162,31 @@ pub fn get_entries_with_tag(db: &DbConnection, tag_id: String) -> Result<Vec<Str
     let mut result = Vec::new();
     for entry_id in entry_ids {
         result.push(entry_id?);
+    }
+
+    Ok(result)
+}
+
+/// Get all entry-tag associations as a map of entry_id -> list of tags (single query)
+pub fn get_all_entry_tags(db: &DbConnection) -> Result<HashMap<String, Vec<Tag>>> {
+    let conn = db.conn();
+    let mut stmt = conn.prepare(
+        "SELECT et.entry_id, t.id, t.name
+         FROM entry_tags et
+         JOIN tags t ON t.id = et.tag_id",
+    )?;
+
+    let rows = stmt.query_map([], |row| {
+        Ok((
+            row.get::<_, String>(0)?,
+            Tag::from_row(row.get(1)?, row.get(2)?),
+        ))
+    })?;
+
+    let mut result: HashMap<String, Vec<Tag>> = HashMap::new();
+    for row in rows {
+        let (entry_id, tag) = row?;
+        result.entry(entry_id).or_default().push(tag);
     }
 
     Ok(result)
