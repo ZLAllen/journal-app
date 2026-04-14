@@ -17,13 +17,13 @@
     allTagsUpdated: Tag[];
   }>();
 
-  const moodIcons: Record<number, string> = {
-    1: '😞',
-    2: '😕',
-    3: '😐',
-    4: '🙂',
-    5: '😁'
-  };
+  const moodOptions = [
+    { value: 1, label: 'Low', icon: ':(', tone: 'mood-1' },
+    { value: 2, label: 'Off', icon: ':/', tone: 'mood-2' },
+    { value: 3, label: 'Even', icon: ':|', tone: 'mood-3' },
+    { value: 4, label: 'Good', icon: ':)', tone: 'mood-4' },
+    { value: 5, label: 'Great', icon: ':D', tone: 'mood-5' }
+  ] as const;
 
   let tiptapEditor: Editor | null = null;
   let title = '';
@@ -436,14 +436,17 @@
       <div class="moods">
         <span>Mood</span>
         <div>
-          {#each [1, 2, 3, 4, 5] as moodValue}
+          {#each moodOptions as moodOption}
             <button
               type="button"
-              class:selected={mood === moodValue}
-              title={`Mood ${moodValue}/5`}
-              on:click={() => setMood(moodValue)}
+              class:selected={mood === moodOption.value}
+              class={moodOption.tone}
+              title={`Mood ${moodOption.value}/5: ${moodOption.label}`}
+              aria-pressed={mood === moodOption.value}
+              aria-label={`${mood === moodOption.value ? 'Clear' : 'Set'} mood ${moodOption.label}`}
+              on:click={() => setMood(moodOption.value)}
             >
-              {moodIcons[moodValue]}
+              <span class="mood-icon" aria-hidden="true">{moodOption.icon}</span>
             </button>
           {/each}
         </div>
@@ -647,12 +650,61 @@
   }
 
   .moods button {
+    min-width: 2.5rem;
     padding: 0.3rem 0.5rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
   }
 
   .moods button.selected {
     border-color: #0ea5e9;
     background: #f0f9ff;
+  }
+
+  .mood-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.6rem;
+    line-height: 1;
+  }
+
+  .moods button.mood-1 {
+    color: #991b1b;
+    background: #fee2e2;
+    border-color: #fca5a5;
+  }
+
+  .moods button.mood-2 {
+    color: #9a3412;
+    background: #ffedd5;
+    border-color: #fdba74;
+  }
+
+  .moods button.mood-3 {
+    color: #1d4ed8;
+    background: #dbeafe;
+    border-color: #93c5fd;
+  }
+
+  .moods button.mood-4 {
+    color: #166534;
+    background: #dcfce7;
+    border-color: #86efac;
+  }
+
+  .moods button.mood-5 {
+    color: #854d0e;
+    background: #fef3c7;
+    border-color: #fcd34d;
+  }
+
+  .moods button.selected.mood-1,
+  .moods button.selected.mood-2,
+  .moods button.selected.mood-3,
+  .moods button.selected.mood-4,
+  .moods button.selected.mood-5 {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7), 0 0 0 3px rgba(14, 165, 233, 0.15);
   }
 
   .tags {
