@@ -9,13 +9,17 @@
 
   const dispatch = createEventDispatcher<{ select: string }>();
 
-  const moodIcon: Record<number, string> = {
-    1: '😞',
-    2: '😕',
-    3: '😐',
-    4: '🙂',
-    5: '😁'
-  };
+  const moodOptions = [
+    { value: 1, label: 'Low', icon: ':(', tone: 'mood-1' },
+    { value: 2, label: 'Off', icon: ':/', tone: 'mood-2' },
+    { value: 3, label: 'Even', icon: ':|', tone: 'mood-3' },
+    { value: 4, label: 'Good', icon: ':)', tone: 'mood-4' },
+    { value: 5, label: 'Great', icon: ':D', tone: 'mood-5' }
+  ] as const;
+
+  function moodOptionFor(value: number) {
+    return moodOptions.find((option) => option.value === value) ?? null;
+  }
 
   function selectEntry(entryId: string): void {
     dispatch('select', entryId);
@@ -54,8 +58,14 @@
           >
             <div class="row">
               <span class="date">{formatDate(entry.created_at)}</span>
-              {#if entry.mood}
-                <span class="mood" title={`Mood ${entry.mood}/5`}>{moodIcon[entry.mood]}</span>
+              {#if entry.mood && moodOptionFor(entry.mood)}
+                <span
+                  class={`mood ${moodOptionFor(entry.mood)?.tone ?? ''}`}
+                  title={`Mood ${entry.mood}/5: ${moodOptionFor(entry.mood)?.label ?? ''}`}
+                  aria-label={`Mood ${entry.mood}/5`}
+                >
+                  {moodOptionFor(entry.mood)?.icon}
+                </span>
               {/if}
             </div>
             <p class="title">{entryTitle(entry.title)}</p>
@@ -149,6 +159,50 @@
     line-height: 1.35;
     color: #0f172a;
     font-weight: 600;
+  }
+
+  .mood {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.2rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.02em;
+  }
+
+  .mood.mood-1 {
+    color: #991b1b;
+    background: #fee2e2;
+    border-color: #fca5a5;
+  }
+
+  .mood.mood-2 {
+    color: #9a3412;
+    background: #ffedd5;
+    border-color: #fdba74;
+  }
+
+  .mood.mood-3 {
+    color: #1d4ed8;
+    background: #dbeafe;
+    border-color: #93c5fd;
+  }
+
+  .mood.mood-4 {
+    color: #166534;
+    background: #dcfce7;
+    border-color: #86efac;
+  }
+
+  .mood.mood-5 {
+    color: #854d0e;
+    background: #fef3c7;
+    border-color: #fcd34d;
   }
 
   .tags {
