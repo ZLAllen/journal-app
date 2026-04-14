@@ -442,7 +442,8 @@
               class:selected={mood === moodOption.value}
               class={moodOption.tone}
               title={`Mood ${moodOption.value}/5: ${moodOption.label}`}
-              aria-label={`Set mood to ${moodOption.label}`}
+              aria-pressed={mood === moodOption.value}
+              aria-label={`${mood === moodOption.value ? 'Clear' : 'Set'} mood ${moodOption.label}`}
               on:click={() => setMood(moodOption.value)}
             >
               <span class="mood-icon" aria-hidden="true">{moodOption.icon}</span>
