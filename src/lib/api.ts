@@ -6,9 +6,12 @@ export interface Entry {
   updated_at: number;
   title: string;
   body: string;
+  body_html: string;
+  body_text: string;
   mood: number | null;
   pinned: boolean;
   deleted_at: number | null;
+  word_count: number;
 }
 
 export interface Tag {

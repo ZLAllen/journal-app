@@ -12,9 +12,12 @@ pub struct Entry {
     pub updated_at: i64, // Unix timestamp in milliseconds
     pub title: String,
     pub body: String,      // Rich text content (HTML or Markdown)
+    pub body_html: String, // Sanitized rich text HTML
+    pub body_text: String, // Plain-text projection for search/previews/stats
     pub mood: Option<i32>, // 1-5 scale, nullable
     pub pinned: bool,
     pub deleted_at: Option<i64>, // Soft delete timestamp
+    pub word_count: i32,
 }
 
 /// Represents a tag for organizing entries
@@ -39,10 +42,13 @@ impl Entry {
             created_at: now,
             updated_at: now,
             title,
-            body,
+            body: body.clone(),
+            body_html: body.clone(),
+            body_text: body,
             mood,
             pinned: false,
             deleted_at: None,
+            word_count: 0,
         }
     }
 }
@@ -60,6 +66,9 @@ impl TryFrom<&Row<'_>> for Entry {
             mood: row.get(5)?,
             pinned: row.get::<_, i32>(6)? != 0,
             deleted_at: row.get(7)?,
+            body_html: row.get(8)?,
+            body_text: row.get(9)?,
+            word_count: row.get(10)?,
         })
     }
 }

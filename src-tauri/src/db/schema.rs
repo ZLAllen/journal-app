@@ -23,5 +23,9 @@ pub fn get_migrations() -> Vec<Migration> {
             name: "004_entry_title",
             sql: include_str!("../../../migrations/004_entry_title.sql"),
         },
+        Migration {
+            name: "005_entry_body_projection",
+            sql: include_str!("../../../migrations/005_entry_body_projection.sql"),
+        },
     ]
 }

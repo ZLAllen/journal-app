@@ -21,6 +21,8 @@ This task list is based on the current implementation review against `design/mvp
 - [x] Editor supports bold, italic, heading, and bullet list controls.
 - [x] Editor supports mood selection, date editing, and tag add/remove.
 - [x] Partial 5-second autosave behavior and save-status UI are implemented.
+- [x] Backend sanitizes persisted editor HTML, stores derived plain text, and computes word count.
+- [x] FTS5 now indexes the derived plain-text entry projection instead of raw editor HTML.
 - [x] Baseline verification passed: `cargo test`.
 - [x] Baseline verification passed: `npm run check`.
 
@@ -30,7 +32,7 @@ This task list is based on the current implementation review against `design/mvp
 - [ ] Current crypto helpers use Argon2 and `age` for generic payload encryption, but they are not wired into database encryption or app lock.
 - [ ] Current entry model uses `title` and `body`; the MVP requires sanitized `body_html`, derived `body_text`, and `word_count`.
 - [x] Current Tauri commands return `Result<T, String>` errors; the MVP requires structured `AppError { code, message, recoverable }`.
-- [ ] Current FTS indexes raw `body`; the MVP requires indexing derived plain text without raw HTML tags.
+- [x] Current FTS indexes raw `body`; the MVP requires indexing derived plain text without raw HTML tags.
 - [ ] Current app opens directly to journal content; the MVP requires first-run passphrase setup and locked startup after setup.
 
 ## Gap Analysis
@@ -61,17 +63,17 @@ This task list is based on the current implementation review against `design/mvp
 
 ### Entries, Editor, Timeline, and Autosave
 
-- [ ] Sanitize editor HTML before persistence.
-- [ ] Allow only MVP-safe tags: `p`, `strong`, `em`, `h1`, `h2`, `h3`, `ul`, `ol`, `li`, and `br`.
-- [ ] Strip scripts, event handlers, external links, images, styles, iframes, and unknown tags.
-- [ ] Generate `body_text` from sanitized HTML for previews, search, snippets, and word count.
-- [ ] Compute and persist `word_count`.
+- [x] Sanitize editor HTML before persistence.
+- [x] Allow only MVP-safe tags: `p`, `strong`, `em`, `h1`, `h2`, `h3`, `ul`, `ol`, `li`, and `br`.
+- [x] Strip scripts, event handlers, external links, images, styles, iframes, and unknown tags.
+- [x] Generate `body_text` from sanitized HTML for previews, search, snippets, and word count.
+- [x] Compute and persist `word_count`.
 - [x] Add pin toggle in editor and timeline.
 - [x] Ensure pinned entries appear first, then all other entries by reverse chronological order.
-- [ ] Add entry delete UI and confirmation behavior.
+- [x] Add entry delete UI and confirmation behavior.
 - [ ] Add empty timeline state with primary new-entry action.
-- [ ] Add `Ctrl+N` for new entry.
-- [ ] Add `Ctrl+S` for manual save.
+- [x] Add `Ctrl+N` for new entry.
+- [x] Add `Ctrl+S` for manual save.
 - [ ] Flush pending saves on editor navigation, app close, and lock.
 - [ ] On app close save failure, show blocking confirmation before closing.
 - [ ] Preserve dirty editor state after failed autosave and retry every 5 seconds.
@@ -215,13 +217,13 @@ Exit criteria:
 - [x] Implement mood selector and backdating.
 - [x] Implement basic tag input on entry editor.
 - [x] Implement partial autosave loop and save status UI.
-- [ ] Implement sanitized HTML persistence.
-- [ ] Implement plain-text extraction and word count.
+- [x] Implement sanitized HTML persistence.
+- [x] Implement plain-text extraction and word count.
 - [ ] Align entry create/update/list/get commands with MVP payloads.
 - [x] Add pinned toggle and persistence.
-- [ ] Add delete entry UI.
+- [x] Add delete entry UI.
 - [ ] Implement lifecycle autosave flush on navigation, close, lock, and `Ctrl+S`.
-- [ ] Add `Ctrl+N`.
+- [x] Add `Ctrl+N`.
 - [ ] Ensure formatting persists after restart.
 - [ ] Ensure no plaintext entry content appears in logs.
 
@@ -235,7 +237,7 @@ Exit criteria:
 ### Phase 3: Search, Filtering, and Tag Management
 
 - [x] Add initial FTS table and triggers for the current schema.
-- [ ] Rebuild FTS around MVP `body_text`.
+- [x] Rebuild FTS around MVP `body_text`.
 - [ ] Implement backend search command.
 - [ ] Implement search UI with highlighted snippets.
 - [ ] Implement date, tag, and mood filters.
@@ -300,9 +302,9 @@ Exit criteria:
 
 ### Unit Tests to Add
 
-- [ ] HTML sanitization.
-- [ ] Plain-text extraction.
-- [ ] Word count calculation.
+- [x] HTML sanitization.
+- [x] Plain-text extraction.
+- [x] Word count calculation.
 - [ ] Date grouping and writing streak calculation.
 - [ ] Tag normalization.
 - [ ] Input validation.

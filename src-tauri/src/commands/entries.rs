@@ -3,6 +3,219 @@ use crate::models::{Entry, Result};
 use chrono::Utc;
 use rusqlite::params;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct BodyProjection {
+    html: String,
+    text: String,
+    word_count: i32,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct ParsedTag {
+    name: String,
+    is_closing: bool,
+    length: usize,
+}
+
+fn project_body(input: &str) -> BodyProjection {
+    let html = sanitize_html(input);
+    let text = extract_text(&html);
+    let word_count = count_words(&text);
+
+    BodyProjection {
+        html,
+        text,
+        word_count,
+    }
+}
+
+fn sanitize_html(input: &str) -> String {
+    const ALLOWED_TAGS: [&str; 10] = [
+        "p", "strong", "em", "h1", "h2", "h3", "ul", "ol", "li", "br",
+    ];
+
+    let mut output = String::with_capacity(input.len());
+    let mut index = 0;
+    let mut blocked_tag: Option<&str> = None;
+
+    while index < input.len() {
+        let remaining = &input[index..];
+
+        if let Some(tag) = blocked_tag {
+            if let Some(parsed) = parse_tag(remaining) {
+                if parsed.is_closing && parsed.name == tag {
+                    blocked_tag = None;
+                }
+                index += parsed.length;
+            } else if let Some(next_tag) = remaining.find('<') {
+                index += next_tag;
+            } else {
+                break;
+            }
+            continue;
+        }
+
+        if remaining.starts_with('<') {
+            if let Some(parsed) = parse_tag(remaining) {
+                if matches!(parsed.name.as_str(), "script" | "style" | "iframe")
+                    && !parsed.is_closing
+                {
+                    blocked_tag = Some(match parsed.name.as_str() {
+                        "script" => "script",
+                        "style" => "style",
+                        "iframe" => "iframe",
+                        _ => unreachable!(),
+                    });
+                } else if ALLOWED_TAGS.contains(&parsed.name.as_str()) {
+                    if parsed.name == "br" {
+                        output.push_str("<br>");
+                    } else if parsed.is_closing {
+                        output.push_str("</");
+                        output.push_str(&parsed.name);
+                        output.push('>');
+                    } else {
+                        output.push('<');
+                        output.push_str(&parsed.name);
+                        output.push('>');
+                    }
+                }
+                index += parsed.length;
+                continue;
+            }
+
+            output.push_str("&lt;");
+            index += 1;
+            continue;
+        }
+
+        let ch = remaining
+            .chars()
+            .next()
+            .expect("remaining input should contain a character");
+        match ch {
+            '&' => output.push_str("&amp;"),
+            '<' => output.push_str("&lt;"),
+            '>' => output.push_str("&gt;"),
+            '"' => output.push_str("&quot;"),
+            '\'' => output.push_str("&#39;"),
+            _ => output.push(ch),
+        }
+        index += ch.len_utf8();
+    }
+
+    output
+}
+
+fn parse_tag(input: &str) -> Option<ParsedTag> {
+    if !input.starts_with('<') {
+        return None;
+    }
+
+    let end = input.find('>')?;
+    let mut content = input[1..end].trim();
+    let is_closing = content.starts_with('/');
+    if is_closing {
+        content = content[1..].trim_start();
+    }
+
+    if content.starts_with('!') || content.starts_with('?') {
+        return Some(ParsedTag {
+            name: String::new(),
+            is_closing,
+            length: end + 1,
+        });
+    }
+
+    let name_end = content
+        .find(|ch: char| ch.is_whitespace() || ch == '/')
+        .unwrap_or(content.len());
+    if name_end == 0 {
+        return None;
+    }
+
+    Some(ParsedTag {
+        name: content[..name_end].to_ascii_lowercase(),
+        is_closing,
+        length: end + 1,
+    })
+}
+
+fn extract_text(html: &str) -> String {
+    let mut text = String::with_capacity(html.len());
+    let mut index = 0;
+
+    while index < html.len() {
+        let remaining = &html[index..];
+
+        if remaining.starts_with('<') {
+            if let Some(parsed) = parse_tag(remaining) {
+                if matches!(parsed.name.as_str(), "p" | "h1" | "h2" | "h3" | "li" | "br") {
+                    text.push(' ');
+                }
+                index += parsed.length;
+                continue;
+            }
+        }
+
+        if remaining.starts_with('&') {
+            if let Some((decoded, length)) = decode_entity(remaining) {
+                text.push(decoded);
+                index += length;
+                continue;
+            }
+        }
+
+        let ch = remaining
+            .chars()
+            .next()
+            .expect("remaining HTML should contain a character");
+        text.push(ch);
+        index += ch.len_utf8();
+    }
+
+    normalize_whitespace(&text)
+}
+
+fn decode_entity(input: &str) -> Option<(char, usize)> {
+    let end = input.find(';')?;
+    if end > 12 {
+        return None;
+    }
+
+    let entity = &input[1..end];
+    let decoded = match entity {
+        "amp" => '&',
+        "lt" => '<',
+        "gt" => '>',
+        "quot" => '"',
+        "apos" => '\'',
+        "#39" => '\'',
+        "nbsp" => ' ',
+        _ if entity.starts_with("#x") => {
+            let codepoint = u32::from_str_radix(&entity[2..], 16).ok()?;
+            char::from_u32(codepoint)?
+        }
+        _ if entity.starts_with('#') => {
+            let codepoint = entity[1..].parse::<u32>().ok()?;
+            char::from_u32(codepoint)?
+        }
+        _ => return None,
+    };
+
+    Some((decoded, end + 1))
+}
+
+fn normalize_whitespace(input: &str) -> String {
+    input.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+fn count_words(input: &str) -> i32 {
+    input
+        .split_whitespace()
+        .filter(|word| !word.is_empty())
+        .count() as i32
+}
+
 /// Create a new journal entry
 pub fn create_entry(
     db: &DbConnection,
@@ -10,18 +223,27 @@ pub fn create_entry(
     body: String,
     mood: Option<i32>,
 ) -> Result<Entry> {
-    let entry = Entry::new(title.clone(), body.clone(), mood);
+    let body_projection = project_body(&body);
+    let mut entry = Entry::new(title.clone(), body_projection.html.clone(), mood);
+    entry.body_html = body_projection.html;
+    entry.body_text = body_projection.text;
+    entry.word_count = body_projection.word_count;
 
     db.run_with_search_index_repair(|conn| {
         conn.execute(
-            "INSERT INTO entries (id, created_at, updated_at, title, body, mood, pinned, deleted_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            "INSERT INTO entries (
+                id, created_at, updated_at, title, body, body_html, body_text, word_count, mood, pinned, deleted_at
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             params![
                 &entry.id,
                 entry.created_at,
                 entry.updated_at,
                 &entry.title,
                 &entry.body,
+                &entry.body_html,
+                &entry.body_text,
+                entry.word_count,
                 entry.mood,
                 if entry.pinned { 1 } else { 0 },
                 entry.deleted_at,
@@ -44,6 +266,7 @@ pub fn update_entry(
     created_at: Option<i64>,
 ) -> Result<Entry> {
     let now = Utc::now().timestamp_millis();
+    let body_projection = project_body(&body);
     let conn = db.conn();
 
     // Check if entry exists and is not deleted
@@ -65,15 +288,29 @@ pub fn update_entry(
             "UPDATE entries
              SET title = ?1,
                  body = ?2,
-                 mood = ?3,
-                 created_at = COALESCE(?4, created_at),
-                 updated_at = ?5
-             WHERE id = ?6",
-            params![&title, &body, mood, created_at, now, &id],
+                 body_html = ?3,
+                 body_text = ?4,
+                 word_count = ?5,
+                 mood = ?6,
+                 created_at = COALESCE(?7, created_at),
+                 updated_at = ?8
+             WHERE id = ?9",
+            params![
+                &title,
+                &body_projection.html,
+                &body_projection.html,
+                &body_projection.text,
+                body_projection.word_count,
+                mood,
+                created_at,
+                now,
+                &id
+            ],
         )?;
 
         let mut stmt = conn.prepare(
-            "SELECT id, created_at, updated_at, title, body, mood, pinned, deleted_at FROM entries WHERE id = ?1",
+            "SELECT id, created_at, updated_at, title, body, mood, pinned, deleted_at, body_html, body_text, word_count
+             FROM entries WHERE id = ?1",
         )?;
 
         let entry = stmt.query_row(params![&id], |row| Entry::try_from(row))?;
@@ -111,10 +348,10 @@ pub fn delete_entry(db: &DbConnection, id: String) -> Result<()> {
 pub fn get_entries(db: &DbConnection) -> Result<Vec<Entry>> {
     let conn = db.conn();
     let mut stmt = conn.prepare(
-        "SELECT id, created_at, updated_at, title, body, mood, pinned, deleted_at 
+        "SELECT id, created_at, updated_at, title, body, mood, pinned, deleted_at, body_html, body_text, word_count
          FROM entries 
          WHERE deleted_at IS NULL 
-         ORDER BY created_at DESC",
+         ORDER BY pinned DESC, created_at DESC",
     )?;
 
     let entries = stmt.query_map([], |row| Entry::try_from(row))?;
@@ -131,7 +368,7 @@ pub fn get_entries(db: &DbConnection) -> Result<Vec<Entry>> {
 pub fn get_entry(db: &DbConnection, id: String) -> Result<Option<Entry>> {
     let conn = db.conn();
     let mut stmt = conn.prepare(
-        "SELECT id, created_at, updated_at, title, body, mood, pinned, deleted_at 
+        "SELECT id, created_at, updated_at, title, body, mood, pinned, deleted_at, body_html, body_text, word_count
          FROM entries 
          WHERE id = ?1 AND deleted_at IS NULL",
     )?;
@@ -165,7 +402,7 @@ pub fn set_pinned(db: &DbConnection, id: String, pinned: bool) -> Result<Entry> 
     }
 
     let entry = conn.query_row(
-        "SELECT id, created_at, updated_at, title, body, mood, pinned, deleted_at
+        "SELECT id, created_at, updated_at, title, body, mood, pinned, deleted_at, body_html, body_text, word_count
          FROM entries
          WHERE id = ?1",
         params![&id],
@@ -179,7 +416,7 @@ pub fn set_pinned(db: &DbConnection, id: String, pinned: bool) -> Result<Entry> 
 pub fn get_pinned_entries(db: &DbConnection) -> Result<Vec<Entry>> {
     let conn = db.conn();
     let mut stmt = conn.prepare(
-        "SELECT id, created_at, updated_at, title, body, mood, pinned, deleted_at 
+        "SELECT id, created_at, updated_at, title, body, mood, pinned, deleted_at, body_html, body_text, word_count
          FROM entries 
          WHERE deleted_at IS NULL AND pinned = 1 
          ORDER BY created_at DESC",
@@ -204,19 +441,45 @@ mod tests {
     }
 
     #[test]
+    fn test_sanitize_html_allows_only_mvp_tags_without_attributes() {
+        let projection = project_body(
+            r#"<h1 onclick="bad()">Title</h1><p>Hello <strong>bold</strong> <a href="https://example.com">link</a><img src=x><script>alert(1)</script><br style="x"></p>"#,
+        );
+
+        assert_eq!(
+            projection.html,
+            "<h1>Title</h1><p>Hello <strong>bold</strong> link<br></p>"
+        );
+        assert_eq!(projection.text, "Title Hello bold link");
+        assert_eq!(projection.word_count, 4);
+    }
+
+    #[test]
+    fn test_sanitize_html_escapes_plain_text_and_decodes_projection() {
+        let projection = project_body("Tea & > \"today\"");
+
+        assert_eq!(projection.html, "Tea &amp; &gt; &quot;today&quot;");
+        assert_eq!(projection.text, "Tea & > \"today\"");
+        assert_eq!(projection.word_count, 4);
+    }
+
+    #[test]
     fn test_create_entry() {
         let db = setup_db();
         let entry = create_entry(
             &db,
             "Test title".to_string(),
-            "Test entry".to_string(),
+            "<p>Test <em>entry</em></p>".to_string(),
             Some(4),
         )
         .expect("Failed to create entry");
 
         assert!(!entry.id.is_empty());
         assert_eq!(entry.title, "Test title");
-        assert_eq!(entry.body, "Test entry");
+        assert_eq!(entry.body, "<p>Test <em>entry</em></p>");
+        assert_eq!(entry.body_html, "<p>Test <em>entry</em></p>");
+        assert_eq!(entry.body_text, "Test entry");
+        assert_eq!(entry.word_count, 2);
         assert_eq!(entry.mood, Some(4));
         assert!(!entry.pinned);
         assert!(entry.deleted_at.is_none());
@@ -255,6 +518,9 @@ mod tests {
 
         assert_eq!(updated.title, "Updated title");
         assert_eq!(updated.body, "Updated");
+        assert_eq!(updated.body_html, "Updated");
+        assert_eq!(updated.body_text, "Updated");
+        assert_eq!(updated.word_count, 1);
         assert_eq!(updated.mood, Some(5));
         assert!(
             updated.updated_at >= entry.updated_at,
