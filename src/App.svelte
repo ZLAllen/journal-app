@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import Editor from './routes/Editor.svelte';
   import Timeline from './routes/Timeline.svelte';
-  import { api, type Entry, type Tag } from './lib/api';
+  import { api, isAppError, type Entry, type Tag } from './lib/api';
 
   type EntryWithTags = Entry & { tags: Tag[] };
 
@@ -32,8 +32,8 @@
       if (entries.length > 0) {
         selectedEntryId = entries[0].id;
       }
-    } catch {
-      error = 'Failed to load entries. Please restart the app.';
+    } catch (loadError: unknown) {
+      error = `Failed to load entries. ${errorMessage(loadError)}`;
     } finally {
       loading = false;
     }
@@ -43,7 +43,15 @@
     const entryTagsMap = await api.getAllEntryTags();
     return rawEntries
       .map((entry) => ({ ...entry, tags: entryTagsMap[entry.id] ?? [] }))
-      .sort((a, b) => b.created_at - a.created_at);
+      .sort(sortEntries);
+  }
+
+  function sortEntries(a: EntryWithTags, b: EntryWithTags): number {
+    if (a.pinned !== b.pinned) {
+      return a.pinned ? -1 : 1;
+    }
+
+    return b.created_at - a.created_at;
   }
 
   async function createNewEntry(): Promise<void> {
@@ -52,11 +60,19 @@
     try {
       const entry = await api.createEntry('', '<p></p>', null);
       const withNoTags: EntryWithTags = { ...entry, tags: [] };
-      entries = [withNoTags, ...entries].sort((a, b) => b.created_at - a.created_at);
+      entries = [withNoTags, ...entries].sort(sortEntries);
       selectedEntryId = entry.id;
-    } catch {
-      error = 'Failed to create a new entry.';
+    } catch (createError: unknown) {
+      error = `Failed to create a new entry. ${errorMessage(createError)}`;
     }
+  }
+
+  function errorMessage(error: unknown): string {
+    if (isAppError(error)) {
+      return error.message;
+    }
+
+    return error instanceof Error ? error.message : String(error);
   }
 
   function onEntrySelect(event: CustomEvent<string>): void {
@@ -67,7 +83,7 @@
     const { entry, tags } = event.detail;
     entries = entries
       .map((item) => (item.id === entry.id ? { ...entry, tags } : item))
-      .sort((a, b) => b.created_at - a.created_at);
+      .sort(sortEntries);
   }
 
   function onTagsUpdated(event: CustomEvent<{ entryId: string; tags: Tag[] }>): void {

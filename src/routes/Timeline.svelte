@@ -58,15 +58,20 @@
           >
             <div class="row">
               <span class="date">{formatDate(entry.created_at)}</span>
-              {#if entry.mood && moodOptionFor(entry.mood)}
-                <span
-                  class={`mood ${moodOptionFor(entry.mood)?.tone ?? ''}`}
-                  title={`Mood ${entry.mood}/5: ${moodOptionFor(entry.mood)?.label ?? ''}`}
-                  aria-label={`Mood ${entry.mood}/5`}
-                >
-                  {moodOptionFor(entry.mood)?.icon}
-                </span>
-              {/if}
+              <span class="badges">
+                {#if entry.pinned}
+                  <span class="pin" title="Pinned" aria-label="Pinned">Pinned</span>
+                {/if}
+                {#if entry.mood && moodOptionFor(entry.mood)}
+                  <span
+                    class={`mood ${moodOptionFor(entry.mood)?.tone ?? ''}`}
+                    title={`Mood ${entry.mood}/5: ${moodOptionFor(entry.mood)?.label ?? ''}`}
+                    aria-label={`Mood ${entry.mood}/5`}
+                  >
+                    {moodOptionFor(entry.mood)?.icon}
+                  </span>
+                {/if}
+              </span>
             </div>
             <p class="title">{entryTitle(entry.title)}</p>
             {#if entry.tags.length > 0}
@@ -149,6 +154,12 @@
     gap: 0.75rem;
   }
 
+  .badges {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
   .date {
     font-size: 0.8rem;
     color: #475569;
@@ -173,6 +184,21 @@
     font-weight: 700;
     line-height: 1;
     letter-spacing: 0.02em;
+  }
+
+  .pin {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.2rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 999px;
+    border: 1px solid #c4b5fd;
+    color: #5b21b6;
+    background: #ede9fe;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
   }
 
   .mood.mood-1 {

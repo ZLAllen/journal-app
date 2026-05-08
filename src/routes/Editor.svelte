@@ -3,7 +3,7 @@
   import { Editor } from '@tiptap/core';
   import StarterKit from '@tiptap/starter-kit';
   import type { Entry, Tag } from '../lib/api';
-  import { api } from '../lib/api';
+  import { api, isAppError } from '../lib/api';
 
   type EntryWithTags = Entry & { tags: Tag[] };
   type SaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
@@ -29,6 +29,7 @@
   let title = '';
   let bodyHtml = '';
   let mood: number | null = null;
+  let pinned = false;
   let entryTags: Tag[] = [];
   let dateInput = '';
   let createdAtMs: number | null = null;
@@ -120,6 +121,7 @@
     title = nextEntry.title;
     bodyHtml = nextEntry.body;
     mood = nextEntry.mood;
+    pinned = nextEntry.pinned;
     entryTags = [...nextEntry.tags];
     createdAtMs = nextEntry.created_at;
     baselineCreatedAtMs = nextEntry.created_at;
@@ -291,7 +293,7 @@
       }
     } catch (error: unknown) {
       saveState = 'error';
-      saveError = error instanceof Error ? error.message : String(error);
+      saveError = errorMessage(error);
     } finally {
       stopAutosaveProgress();
       saveInFlight = false;
@@ -359,6 +361,29 @@
     dispatch('tagsUpdated', { entryId: entry.id, tags: entryTags });
   }
 
+  async function togglePinned(): Promise<void> {
+    if (!entry) {
+      return;
+    }
+
+    try {
+      const updatedEntry = await api.setEntryPinned(entry.id, !pinned);
+      pinned = updatedEntry.pinned;
+      dispatch('entrySaved', { entry: updatedEntry, tags: entryTags });
+    } catch (error: unknown) {
+      saveState = 'error';
+      saveError = errorMessage(error);
+    }
+  }
+
+  function errorMessage(error: unknown): string {
+    if (isAppError(error)) {
+      return error.message;
+    }
+
+    return error instanceof Error ? error.message : String(error);
+  }
+
   function onTagKeydown(event: KeyboardEvent): void {
     if (event.key === 'Enter') {
       event.preventDefault();
@@ -373,11 +398,21 @@
   {:else}
     <header>
       <h2>Editor</h2>
-      <div class="status" data-state={saveState} aria-live="polite">
-        {#if saveState === 'pending'}Saving in {autosaveLabel}{/if}
-        {#if saveState === 'saving'}<span class="saving-dot" aria-hidden="true"></span>Saving...{/if}
-        {#if saveState === 'saved'}Saved{/if}
-        {#if saveState === 'error'}Save failed{/if}
+      <div class="header-actions">
+        <button
+          type="button"
+          class:pinned
+          aria-pressed={pinned}
+          on:click={togglePinned}
+        >
+          {pinned ? 'Pinned' : 'Pin'}
+        </button>
+        <div class="status" data-state={saveState} aria-live="polite">
+          {#if saveState === 'pending'}Saving in {autosaveLabel}{/if}
+          {#if saveState === 'saving'}<span class="saving-dot" aria-hidden="true"></span>Saving...{/if}
+          {#if saveState === 'saved'}Saved{/if}
+          {#if saveState === 'error'}Save failed{/if}
+        </div>
       </div>
     </header>
 
@@ -504,6 +539,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 1rem;
   }
 
   h2 {
@@ -516,6 +552,28 @@
     text-align: right;
     font-size: 0.85rem;
     color: #64748b;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .header-actions button {
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    border-radius: 0.5rem;
+    padding: 0.35rem 0.75rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    width: auto;
+  }
+
+  .header-actions button.pinned {
+    border-color: #7c3aed;
+    color: #5b21b6;
+    background: #ede9fe;
   }
 
   .status[data-state='error'] {

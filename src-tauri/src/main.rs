@@ -1,15 +1,23 @@
 use journal::commands;
 use journal::db::DbConnection;
-use journal::models;
+use journal::models::{self, AppError};
 use std::collections::HashMap;
 use std::fs;
 use std::sync::Mutex;
+use std::sync::MutexGuard;
 use tauri::Manager;
 use tauri::State;
 
 /// Application state holding the database connection
 struct AppState {
     db: Mutex<DbConnection>,
+}
+
+fn lock_db<'a>(state: &'a State<'_, AppState>) -> Result<MutexGuard<'a, DbConnection>, AppError> {
+    state
+        .db
+        .lock()
+        .map_err(|e| AppError::StateLock(e.to_string()))
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -33,30 +41,46 @@ struct CreateTagPayload {
     name: String,
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
+struct RenameTagPayload {
+    id: String,
+    name: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct SetEntryPinnedPayload {
+    id: String,
+    pinned: bool,
+}
+
+#[derive(serde::Serialize)]
+struct OkResponse {
+    ok: bool,
+}
+
 #[tauri::command]
 fn create_entry(
     payload: CreateEntryPayload,
     state: State<'_, AppState>,
-) -> Result<models::Entry, String> {
-    let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
+) -> Result<models::Entry, AppError> {
+    let db_guard = lock_db(&state)?;
 
     commands::entries::create_entry(&db_guard, payload.title, payload.body, payload.mood)
-        .map_err(|e| format!("Failed to create entry: {}", e))
 }
 
 #[tauri::command]
-fn get_entries(state: State<'_, AppState>) -> Result<Vec<models::Entry>, String> {
-    let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
+fn get_entries(state: State<'_, AppState>) -> Result<Vec<models::Entry>, AppError> {
+    let db_guard = lock_db(&state)?;
 
-    commands::entries::get_entries(&db_guard).map_err(|e| format!("Failed to get entries: {}", e))
+    commands::entries::get_entries(&db_guard)
 }
 
 #[tauri::command]
 fn update_entry(
     payload: UpdateEntryPayload,
     state: State<'_, AppState>,
-) -> Result<models::Entry, String> {
-    let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
+) -> Result<models::Entry, AppError> {
+    let db_guard = lock_db(&state)?;
 
     commands::entries::update_entry(
         &db_guard,
@@ -66,44 +90,78 @@ fn update_entry(
         payload.mood,
         payload.created_at,
     )
-    .map_err(|e| format!("Failed to update entry: {}", e))
 }
 
 #[tauri::command]
-fn delete_entry(id: String, state: State<'_, AppState>) -> Result<(), String> {
-    let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
+fn delete_entry(id: String, state: State<'_, AppState>) -> Result<OkResponse, AppError> {
+    let db_guard = lock_db(&state)?;
 
-    commands::entries::delete_entry(&db_guard, id)
-        .map_err(|e| format!("Failed to delete entry: {}", e))
+    commands::entries::delete_entry(&db_guard, id)?;
+
+    Ok(OkResponse { ok: true })
+}
+
+#[tauri::command]
+fn set_entry_pinned(
+    payload: SetEntryPinnedPayload,
+    state: State<'_, AppState>,
+) -> Result<models::Entry, AppError> {
+    let db_guard = lock_db(&state)?;
+
+    commands::entries::set_pinned(&db_guard, payload.id, payload.pinned)
 }
 
 #[tauri::command]
 fn create_tag(
     payload: CreateTagPayload,
     state: State<'_, AppState>,
-) -> Result<models::Tag, String> {
-    let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
+) -> Result<models::Tag, AppError> {
+    let db_guard = lock_db(&state)?;
 
     commands::tags::create_tag(&db_guard, payload.name)
-        .map_err(|e| format!("Failed to create tag: {}", e))
 }
 
 #[tauri::command]
-fn get_all_tags(state: State<'_, AppState>) -> Result<Vec<models::Tag>, String> {
-    let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
+fn get_all_tags(state: State<'_, AppState>) -> Result<Vec<models::Tag>, AppError> {
+    let db_guard = lock_db(&state)?;
 
-    commands::tags::get_all_tags(&db_guard).map_err(|e| format!("Failed to get tags: {}", e))
+    commands::tags::get_all_tags(&db_guard)
+}
+
+#[tauri::command]
+fn list_tags(state: State<'_, AppState>) -> Result<Vec<models::Tag>, AppError> {
+    let db_guard = lock_db(&state)?;
+
+    commands::tags::get_all_tags(&db_guard)
+}
+
+#[tauri::command]
+fn rename_tag(
+    payload: RenameTagPayload,
+    state: State<'_, AppState>,
+) -> Result<models::Tag, AppError> {
+    let db_guard = lock_db(&state)?;
+
+    commands::tags::rename_tag(&db_guard, payload.id, payload.name)
+}
+
+#[tauri::command]
+fn delete_tag(id: String, state: State<'_, AppState>) -> Result<OkResponse, AppError> {
+    let db_guard = lock_db(&state)?;
+
+    commands::tags::delete_tag(&db_guard, id)?;
+
+    Ok(OkResponse { ok: true })
 }
 
 #[tauri::command]
 fn get_tags_for_entry(
     entry_id: String,
     state: State<'_, AppState>,
-) -> Result<Vec<models::Tag>, String> {
-    let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
+) -> Result<Vec<models::Tag>, AppError> {
+    let db_guard = lock_db(&state)?;
 
     commands::tags::get_tags_for_entry(&db_guard, entry_id)
-        .map_err(|e| format!("Failed to get tags: {}", e))
 }
 
 #[tauri::command]
@@ -111,11 +169,10 @@ fn assign_tag_to_entry(
     entry_id: String,
     tag_id: String,
     state: State<'_, AppState>,
-) -> Result<(), String> {
-    let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
+) -> Result<(), AppError> {
+    let db_guard = lock_db(&state)?;
 
     commands::tags::assign_tag_to_entry(&db_guard, entry_id, tag_id)
-        .map_err(|e| format!("Failed to assign tag: {}", e))
 }
 
 #[tauri::command]
@@ -123,21 +180,19 @@ fn remove_tag_from_entry(
     entry_id: String,
     tag_id: String,
     state: State<'_, AppState>,
-) -> Result<(), String> {
-    let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
+) -> Result<(), AppError> {
+    let db_guard = lock_db(&state)?;
 
     commands::tags::remove_tag_from_entry(&db_guard, entry_id, tag_id)
-        .map_err(|e| format!("Failed to remove tag: {}", e))
 }
 
 #[tauri::command]
 fn get_all_entry_tags(
     state: State<'_, AppState>,
-) -> Result<HashMap<String, Vec<models::Tag>>, String> {
-    let db_guard = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
+) -> Result<HashMap<String, Vec<models::Tag>>, AppError> {
+    let db_guard = lock_db(&state)?;
 
     commands::tags::get_all_entry_tags(&db_guard)
-        .map_err(|e| format!("Failed to get entry tags: {}", e))
 }
 
 fn main() {
@@ -164,8 +219,12 @@ fn main() {
             get_entries,
             update_entry,
             delete_entry,
+            set_entry_pinned,
             create_tag,
             get_all_tags,
+            list_tags,
+            rename_tag,
+            delete_tag,
             get_tags_for_entry,
             assign_tag_to_entry,
             remove_tag_from_entry,

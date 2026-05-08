@@ -16,6 +16,26 @@ export interface Tag {
   name: string;
 }
 
+export interface AppError {
+  code: string;
+  message: string;
+  recoverable: boolean;
+}
+
+export interface OkResponse {
+  ok: boolean;
+}
+
+export function isAppError(error: unknown): error is AppError {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    'message' in error &&
+    'recoverable' in error
+  );
+}
+
 export const api = {
   createEntry: (title: string, body: string, mood: number | null = null) =>
     invoke<Entry>('create_entry', { payload: { title, body, mood } }),
@@ -27,9 +47,15 @@ export const api = {
     mood: number | null = null,
     created_at: number | null = null
   ) => invoke<Entry>('update_entry', { payload: { id, title, body, mood, created_at } }),
-  deleteEntry: (id: string) => invoke<void>('delete_entry', { id }),
+  deleteEntry: (id: string) => invoke<OkResponse>('delete_entry', { id }),
+  setEntryPinned: (id: string, pinned: boolean) =>
+    invoke<Entry>('set_entry_pinned', { payload: { id, pinned } }),
   createTag: (name: string) => invoke<Tag>('create_tag', { payload: { name } }),
+  listTags: () => invoke<Tag[]>('list_tags'),
   getAllTags: () => invoke<Tag[]>('get_all_tags'),
+  renameTag: (id: string, name: string) =>
+    invoke<Tag>('rename_tag', { payload: { id, name } }),
+  deleteTag: (id: string) => invoke<OkResponse>('delete_tag', { id }),
   getTagsForEntry: (entry_id: string) =>
     invoke<Tag[]>('get_tags_for_entry', { entry_id }),
   assignTagToEntry: (entry_id: string, tag_id: string) =>

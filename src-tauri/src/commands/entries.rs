@@ -146,11 +146,15 @@ pub fn get_entry(db: &DbConnection, id: String) -> Result<Option<Entry>> {
 }
 
 /// Set the pinned status of an entry
-pub fn set_pinned(db: &DbConnection, id: String, pinned: bool) -> Result<()> {
+pub fn set_pinned(db: &DbConnection, id: String, pinned: bool) -> Result<Entry> {
     let conn = db.conn();
     let rows_affected = conn.execute(
-        "UPDATE entries SET pinned = ?1 WHERE id = ?2 AND deleted_at IS NULL",
-        params![if pinned { 1 } else { 0 }, &id],
+        "UPDATE entries SET pinned = ?1, updated_at = ?2 WHERE id = ?3 AND deleted_at IS NULL",
+        params![
+            if pinned { 1 } else { 0 },
+            Utc::now().timestamp_millis(),
+            &id
+        ],
     )?;
 
     if rows_affected == 0 {
@@ -160,7 +164,15 @@ pub fn set_pinned(db: &DbConnection, id: String, pinned: bool) -> Result<()> {
         )));
     }
 
-    Ok(())
+    let entry = conn.query_row(
+        "SELECT id, created_at, updated_at, title, body, mood, pinned, deleted_at
+         FROM entries
+         WHERE id = ?1",
+        params![&id],
+        |row| Entry::try_from(row),
+    )?;
+
+    Ok(entry)
 }
 
 /// Get all pinned entries

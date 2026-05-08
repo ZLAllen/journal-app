@@ -1,5 +1,6 @@
 use chrono::Utc;
 use rusqlite::Row;
+use serde::ser::SerializeStruct;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -97,6 +98,9 @@ pub enum AppError {
     #[error("Invalid input: {0}")]
     InvalidInput(String),
 
+    #[error("Application state lock error: {0}")]
+    StateLock(String),
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
@@ -104,4 +108,67 @@ pub enum AppError {
     Serde(#[from] serde_json::error::Error),
 }
 
+impl AppError {
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::Database(_) => "DATABASE",
+            Self::CorruptDatabase(_) => "CORRUPT_DATABASE",
+            Self::Encryption(_) => "ENCRYPTION",
+            Self::Decryption(_) => "DECRYPTION",
+            Self::NotFound(_) => "NOT_FOUND",
+            Self::InvalidInput(_) => "INVALID_INPUT",
+            Self::StateLock(_) => "STATE_LOCK",
+            Self::Io(_) => "IO",
+            Self::Serde(_) => "SERIALIZATION",
+        }
+    }
+
+    pub fn recoverable(&self) -> bool {
+        match self {
+            Self::CorruptDatabase(_) | Self::StateLock(_) => false,
+            Self::Database(_)
+            | Self::Encryption(_)
+            | Self::Decryption(_)
+            | Self::NotFound(_)
+            | Self::InvalidInput(_)
+            | Self::Io(_)
+            | Self::Serde(_) => true,
+        }
+    }
+}
+
+impl Serialize for AppError {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct("AppError", 3)?;
+        state.serialize_field("code", self.code())?;
+        state.serialize_field("message", &self.to_string())?;
+        state.serialize_field("recoverable", &self.recoverable())?;
+        state.end()
+    }
+}
+
 pub type Result<T> = std::result::Result<T, AppError>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn app_error_serializes_to_frontend_contract() {
+        let error = AppError::InvalidInput("Mood must be between 1 and 5".to_string());
+        let serialized = serde_json::to_value(error).expect("error should serialize");
+
+        assert_eq!(
+            serialized,
+            json!({
+                "code": "INVALID_INPUT",
+                "message": "Invalid input: Mood must be between 1 and 5",
+                "recoverable": true
+            })
+        );
+    }
+}
