@@ -15,6 +15,7 @@
     entrySaved: { entry: Entry; tags: Tag[] };
     tagsUpdated: { entryId: string; tags: Tag[] };
     allTagsUpdated: Tag[];
+    entryDeleted: { entryId: string };
   }>();
 
   const moodOptions = [
@@ -45,7 +46,6 @@
   let saveInFlight = false;
   let queuedSave = false;
   let changeRevision = 0;
-  let lastUserEditAt = 0;
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
   let autosaveTickTimer: ReturnType<typeof setInterval> | null = null;
   let autosaveDueAt = 0;
@@ -57,7 +57,6 @@
   let editorRoot: HTMLDivElement | null = null;
 
   const AUTOSAVE_DELAY_MS = 5000;
-  const ACTIVE_EDIT_GRACE_MS = 1200;
 
   $: autosaveRemainingMs =
     saveState === 'pending' ? Math.max(0, autosaveDueAt - autosaveNowMs) : 0;
@@ -87,9 +86,23 @@
     if (entry) {
       syncFromEntry(entry);
     }
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handlePageHide);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('keydown', handleWindowKeydown);
+
+    // Expose a meaningful label for assistive tech on the editor surface.
+    editorRoot.setAttribute('role', 'textbox');
+    editorRoot.setAttribute('aria-multiline', 'true');
+    editorRoot.setAttribute('aria-label', 'Journal entry content');
   });
 
   onDestroy(() => {
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.removeEventListener('pagehide', handlePageHide);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.removeEventListener('keydown', handleWindowKeydown);
     clearPendingTimers();
     tiptapEditor?.destroy();
   });
@@ -198,14 +211,9 @@
 
   function queueSaveAttempt(delayMs: number): void {
     clearPendingSaveTimer();
+    saveState = 'pending';
     startAutosaveProgress(delayMs);
     saveTimer = setTimeout(() => {
-      const idleForMs = Date.now() - lastUserEditAt;
-      if (idleForMs < ACTIVE_EDIT_GRACE_MS) {
-        queueSaveAttempt(ACTIVE_EDIT_GRACE_MS - idleForMs);
-        return;
-      }
-
       void persistEntry();
     }, delayMs);
   }
@@ -229,11 +237,22 @@
       return;
     }
 
-    lastUserEditAt = Date.now();
     changeRevision += 1;
     dirty = true;
-    saveState = 'pending';
     saveError = '';
+
+    if (saveInFlight) {
+      queuedSave = true;
+      return;
+    }
+
+    if (saveTimer) {
+      if (saveState !== 'pending') {
+        saveState = 'pending';
+      }
+      return;
+    }
+
     queueSaveAttempt(AUTOSAVE_DELAY_MS);
   }
 
@@ -297,10 +316,17 @@
     } finally {
       stopAutosaveProgress();
       saveInFlight = false;
-      if (queuedSave) {
+      if (dirty && queuedSave) {
         queueSaveAttempt(300);
+      } else if (dirty && saveState === 'error') {
+        queueSaveAttempt(AUTOSAVE_DELAY_MS);
       }
     }
+  }
+
+  async function persistNow(): Promise<void> {
+    clearPendingSaveTimer();
+    await persistEntry();
   }
 
   function updateTitle(event: Event): void {
@@ -376,6 +402,77 @@
     }
   }
 
+  async function deleteCurrentEntry(): Promise<void> {
+    if (!entry) {
+      return;
+    }
+
+    const confirmed = window.confirm('Delete this entry? This cannot be undone.');
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await api.deleteEntry(entry.id);
+      dispatch('entryDeleted', { entryId: entry.id });
+      saveState = 'idle';
+      saveError = '';
+      dirty = false;
+    } catch (error: unknown) {
+      saveState = 'error';
+      saveError = errorMessage(error);
+    }
+  }
+
+  function handleWindowKeydown(event: KeyboardEvent): void {
+    if (!(event.ctrlKey || event.metaKey)) {
+      return;
+    }
+
+    if (event.key.toLowerCase() === 's') {
+      event.preventDefault();
+      void persistNow();
+    }
+  }
+
+  function handleBeforeUnload(event: BeforeUnloadEvent): void {
+    if (!hasUnsavedChanges()) {
+      return;
+    }
+
+    // Trigger a last-chance save, and still block close if unsaved/failing.
+    if (dirty && !saveInFlight) {
+      void persistNow();
+    }
+
+    event.preventDefault();
+    event.returnValue = '';
+  }
+
+  function handlePageHide(): void {
+    if (!dirty || saveInFlight) {
+      return;
+    }
+
+    void persistNow();
+  }
+
+  function handleVisibilityChange(): void {
+    if (document.visibilityState !== 'hidden') {
+      return;
+    }
+
+    if (!dirty || saveInFlight) {
+      return;
+    }
+
+    void persistNow();
+  }
+
+  function hasUnsavedChanges(): boolean {
+    return dirty || saveInFlight || saveState === 'pending' || saveState === 'error';
+  }
+
   function errorMessage(error: unknown): string {
     if (isAppError(error)) {
       return error.message;
@@ -402,10 +499,14 @@
         <button
           type="button"
           class:pinned
+          aria-label={pinned ? 'Unpin entry' : 'Pin entry'}
           aria-pressed={pinned}
           on:click={togglePinned}
         >
           {pinned ? 'Pinned' : 'Pin'}
+        </button>
+        <button type="button" class="danger" aria-label="Delete entry" on:click={deleteCurrentEntry}>
+          Delete
         </button>
         <div class="status" data-state={saveState} aria-live="polite">
           {#if saveState === 'pending'}Saving in {autosaveLabel}{/if}
@@ -431,9 +532,10 @@
       <input type="text" value={title} placeholder="Add a title" on:input={updateTitle} />
     </label>
 
-    <div class="toolbar">
+    <div class="toolbar" role="toolbar" aria-label="Editor formatting controls">
       <button
         type="button"
+        aria-label="Toggle bold"
         class:active={tiptapEditor?.isActive('bold')}
         on:click={() => tiptapEditor?.chain().focus().toggleBold().run()}
       >
@@ -441,6 +543,7 @@
       </button>
       <button
         type="button"
+        aria-label="Toggle italic"
         class:active={tiptapEditor?.isActive('italic')}
         on:click={() => tiptapEditor?.chain().focus().toggleItalic().run()}
       >
@@ -448,6 +551,7 @@
       </button>
       <button
         type="button"
+        aria-label="Toggle heading"
         class:active={tiptapEditor?.isActive('heading', { level: 2 })}
         on:click={() => tiptapEditor?.chain().focus().toggleHeading({ level: 2 }).run()}
       >
@@ -455,6 +559,7 @@
       </button>
       <button
         type="button"
+        aria-label="Toggle bullet list"
         class:active={tiptapEditor?.isActive('bulletList')}
         on:click={() => tiptapEditor?.chain().focus().toggleBulletList().run()}
       >
@@ -468,7 +573,7 @@
         <input type="date" value={dateInput} on:change={updateDate} />
       </label>
 
-      <div class="moods">
+      <div class="moods" aria-label="Mood selector">
         <span>Mood</span>
         <div>
           {#each moodOptions as moodOption}
@@ -506,9 +611,10 @@
           bind:value={tagDraft}
           list="tag-suggestions"
           placeholder="Add a tag"
+          aria-label="Tag input"
           on:keydown={onTagKeydown}
         />
-        <button type="button" on:click={addTag}>Add Tag</button>
+        <button type="button" aria-label="Add tag" on:click={addTag}>Add Tag</button>
       </div>
 
       <datalist id="tag-suggestions">
@@ -570,10 +676,23 @@
     width: auto;
   }
 
+  button:focus-visible,
+  input:focus-visible,
+  .editor :global(.ProseMirror):focus-visible {
+    outline: 2px solid #0284c7;
+    outline-offset: 2px;
+  }
+
   .header-actions button.pinned {
     border-color: #7c3aed;
     color: #5b21b6;
     background: #ede9fe;
+  }
+
+  .header-actions button.danger {
+    border-color: #fca5a5;
+    color: #b91c1c;
+    background: #fef2f2;
   }
 
   .status[data-state='error'] {

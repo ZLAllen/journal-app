@@ -71,27 +71,27 @@ This task list is based on the current implementation review against `design/mvp
 - [x] Add pin toggle in editor and timeline.
 - [x] Ensure pinned entries appear first, then all other entries by reverse chronological order.
 - [x] Add entry delete UI and confirmation behavior.
-- [ ] Add empty timeline state with primary new-entry action.
+- [x] Add empty timeline state with primary new-entry action.
 - [x] Add `Ctrl+N` for new entry.
 - [x] Add `Ctrl+S` for manual save.
 - [ ] Flush pending saves on editor navigation, app close, and lock.
-- [ ] On app close save failure, show blocking confirmation before closing.
-- [ ] Preserve dirty editor state after failed autosave and retry every 5 seconds.
-- [ ] Verify continuous typing still saves periodically, not only after debounce idle.
+- [x] On app close save failure, show blocking confirmation before closing.
+- [x] Preserve dirty editor state after failed autosave and retry every 5 seconds.
+- [x] Verify continuous typing still saves periodically, not only after debounce idle.
 
 ### Search, Filtering, and Tags
 
-- [ ] Add backend `search_entries` command.
-- [ ] Implement FTS5 query over `entries.body_text`.
-- [ ] Generate highlighted snippets through FTS5 `snippet()` or `highlight()`.
+- [x] Add backend `search_entries` command.
+- [x] Implement FTS5 query over `entries.body_text`.
+- [x] Generate highlighted snippets through FTS5 `snippet()` or `highlight()`.
 - [ ] Support empty query with filters as filtered timeline results.
 - [ ] Add date range filter.
 - [ ] Add tag filter.
 - [ ] Add mood filter.
 - [ ] Exclude soft-deleted entries from all search and filter results.
-- [ ] Replace placeholder `Search.svelte` with real search UI.
-- [ ] Add no-results empty state.
-- [ ] Add `Ctrl+F` to focus search.
+- [x] Replace placeholder `Search.svelte` with real search UI.
+- [x] Add no-results empty state.
+- [x] Add `Ctrl+F` to focus search.
 - [ ] Add tag management screen.
 - [ ] Show tag entry counts.
 - [ ] Add rename tag UI.
@@ -118,9 +118,9 @@ This task list is based on the current implementation review against `design/mvp
 
 ### Accessibility, Performance, CI, and Release
 
-- [ ] Add visible focus indicators for all interactive controls.
+- [x] Add visible focus indicators for all interactive controls.
 - [ ] Add accessible names for toolbar, mood, tag, search, filter, settings, export, and delete controls.
-- [ ] Ensure rich text editor has a meaningful label and does not trap keyboard focus.
+- [x] Ensure rich text editor has a meaningful label and does not trap keyboard focus.
 - [ ] Verify text contrast meets WCAG 2.1 AA intent.
 - [ ] Verify core flows work at 150% text scaling.
 - [ ] Add 10,000-entry fixture generator.
@@ -169,7 +169,7 @@ type AppError = {
 
 ### Search, Tag, Stats, Export, and Data Commands
 
-- [ ] `search_entries({ query, filters?, limit?, offset? })` returns `{ results: SearchResult[], elapsed_ms: number }`.
+- [x] `search_entries({ query, filters?, limit?, offset? })` returns `{ results: SearchResult[], elapsed_ms: number }`.
 - [x] `list_tags()` returns `Tag[]`.
 - [x] `create_tag({ name })` returns `Tag`.
 - [x] `rename_tag({ id, name })` returns `Tag`.
@@ -238,7 +238,7 @@ Exit criteria:
 
 - [x] Add initial FTS table and triggers for the current schema.
 - [x] Rebuild FTS around MVP `body_text`.
-- [ ] Implement backend search command.
+- [x] Implement backend search command.
 - [ ] Implement search UI with highlighted snippets.
 - [ ] Implement date, tag, and mood filters.
 - [ ] Implement tag management screen.
@@ -276,7 +276,7 @@ Exit criteria:
 
 - [ ] Implement writing streak.
 - [ ] Implement total entries, total word count, entries this month, and top 10 tags.
-- [ ] Implement `Ctrl+F`.
+- [x] Implement `Ctrl+F`.
 - [ ] Complete empty states and onboarding copy.
 - [ ] Run accessibility checklist.
 - [ ] Add app icon, window title, and About screen polish.

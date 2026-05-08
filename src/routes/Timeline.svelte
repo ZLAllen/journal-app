@@ -6,8 +6,9 @@
 
   export let entries: TimelineEntry[] = [];
   export let selectedEntryId = '';
+  export let emptyMessage = 'Write your first entry to populate the timeline.';
 
-  const dispatch = createEventDispatcher<{ select: string }>();
+  const dispatch = createEventDispatcher<{ select: string; create: void }>();
 
   const moodOptions = [
     { value: 1, label: 'Low', icon: ':(', tone: 'mood-1' },
@@ -23,6 +24,10 @@
 
   function selectEntry(entryId: string): void {
     dispatch('select', entryId);
+  }
+
+  function createEntry(): void {
+    dispatch('create');
   }
 
   function entryTitle(title: string): string {
@@ -46,13 +51,17 @@
   </header>
 
   {#if entries.length === 0}
-    <p class="empty">Write your first entry to populate the timeline.</p>
+    <div class="empty">
+      <p>{emptyMessage}</p>
+      <button type="button" on:click={createEntry}>New Entry</button>
+    </div>
   {:else}
     <ul>
       {#each entries as entry (entry.id)}
         <li>
           <button
             type="button"
+            aria-label={`Open entry from ${formatDate(entry.created_at)}`}
             class:selected={entry.id === selectedEntryId}
             on:click={() => selectEntry(entry.id)}
           >
@@ -118,6 +127,26 @@
     border: 1px dashed #cbd5e1;
     border-radius: 0.75rem;
     color: #475569;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .empty p {
+    margin: 0;
+  }
+
+  .empty button {
+    border: 0;
+    background: #0ea5e9;
+    color: #fff;
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.7rem;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.86rem;
+    width: auto;
   }
 
   ul {
@@ -140,6 +169,11 @@
     text-align: left;
     padding: 0.75rem;
     cursor: pointer;
+  }
+
+  button:focus-visible {
+    outline: 2px solid #0284c7;
+    outline-offset: 2px;
   }
 
   button.selected {

@@ -53,6 +53,13 @@ struct SetEntryPinnedPayload {
     pinned: bool,
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
+struct SearchEntriesPayload {
+    query: String,
+    limit: Option<i64>,
+    offset: Option<i64>,
+}
+
 #[derive(serde::Serialize)]
 struct OkResponse {
     ok: bool,
@@ -195,6 +202,16 @@ fn get_all_entry_tags(
     commands::tags::get_all_entry_tags(&db_guard)
 }
 
+#[tauri::command]
+fn search_entries(
+    payload: SearchEntriesPayload,
+    state: State<'_, AppState>,
+) -> Result<commands::search::SearchEntriesResponse, AppError> {
+    let db_guard = lock_db(&state)?;
+
+    commands::search::search_entries(&db_guard, payload.query, payload.limit, payload.offset)
+}
+
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
@@ -229,6 +246,7 @@ fn main() {
             assign_tag_to_entry,
             remove_tag_from_entry,
             get_all_entry_tags,
+            search_entries,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

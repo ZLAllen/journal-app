@@ -29,6 +29,16 @@ export interface OkResponse {
   ok: boolean;
 }
 
+export interface SearchResult {
+  entry: Entry;
+  snippet: string;
+}
+
+export interface SearchEntriesResponse {
+  results: SearchResult[];
+  elapsed_ms: number;
+}
+
 export function isAppError(error: unknown): error is AppError {
   return (
     typeof error === 'object' &&
@@ -65,5 +75,9 @@ export const api = {
     invoke<void>('assign_tag_to_entry', { entry_id, tag_id }),
   removeTagFromEntry: (entry_id: string, tag_id: string) =>
     invoke<void>('remove_tag_from_entry', { entry_id, tag_id }),
-  getAllEntryTags: () => invoke<Record<string, Tag[]>>('get_all_entry_tags')
+  getAllEntryTags: () => invoke<Record<string, Tag[]>>('get_all_entry_tags'),
+  searchEntries: (query: string, limit: number = 50, offset: number = 0) =>
+    invoke<SearchEntriesResponse>('search_entries', {
+      payload: { query, limit, offset }
+    })
 };
