@@ -27,6 +27,7 @@
   let searchTimer: ReturnType<typeof setTimeout> | null = null;
   let searchRevision = 0;
   let searchPanel: Search | null = null;
+  let searchSnippets: Record<string, string> = {};
   let tagCounts: Record<string, number> = {};
   let filters: SearchFilters = {
     dateFrom: '',
@@ -45,6 +46,7 @@
   $: if (!searching && searchQuery.trim().length === 0 && !hasActiveFilters()) {
     visibleEntries = entries;
     searchElapsedMs = null;
+    searchSnippets = {};
   }
 
   onMount(() => {
@@ -287,6 +289,7 @@
       searching = false;
       visibleEntries = applyFilters(entries);
       searchElapsedMs = null;
+      searchSnippets = {};
       return;
     }
 
@@ -299,6 +302,9 @@
         }
 
         const ids = response.results.map((result) => result.entry.id);
+        searchSnippets = Object.fromEntries(
+          response.results.map((result) => [result.entry.id, result.snippet])
+        );
         const byId = new Map(entries.map((entry) => [entry.id, entry]));
         const matchedEntries = ids
           .map((id) => byId.get(id))
@@ -312,6 +318,7 @@
 
         visibleEntries = [];
         searchElapsedMs = null;
+        searchSnippets = {};
         error = `Search failed. ${errorMessage(searchError)}`;
       } finally {
         if (revision === searchRevision) {
@@ -363,6 +370,8 @@
         <Timeline
           entries={visibleEntries}
           {selectedEntryId}
+          snippets={searchSnippets}
+          query={searchQuery}
           emptyMessage={
             searchQuery.trim().length > 0 || hasActiveFilters()
               ? 'No entries matched your search.'

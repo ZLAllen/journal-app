@@ -239,7 +239,7 @@ Exit criteria:
 - [x] Add initial FTS table and triggers for the current schema.
 - [x] Rebuild FTS around MVP `body_text`.
 - [x] Implement backend search command.
-- [ ] Implement search UI with highlighted snippets.
+- [x] Implement search UI with highlighted snippets.
 - [x] Implement date, tag, and mood filters.
 - [x] Implement tag management screen.
 - [x] Implement tag rename/delete behavior in the UI.

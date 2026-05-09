@@ -7,6 +7,8 @@
   export let entries: TimelineEntry[] = [];
   export let selectedEntryId = '';
   export let emptyMessage = 'Write your first entry to populate the timeline.';
+  export let snippets: Record<string, string> = {};
+  export let query = '';
 
   const dispatch = createEventDispatcher<{ select: string; create: void }>();
 
@@ -41,6 +43,31 @@
       month: 'short',
       day: 'numeric'
     });
+  }
+
+  function parseSnippet(rawSnippet: string): Array<{ text: string; highlighted: boolean }> {
+    const segments: Array<{ text: string; highlighted: boolean }> = [];
+    const parts = rawSnippet.split('<mark>');
+    for (let index = 0; index < parts.length; index += 1) {
+      const part = parts[index];
+      if (index === 0) {
+        if (part.length > 0) {
+          segments.push({ text: part, highlighted: false });
+        }
+        continue;
+      }
+
+      const [highlightedPart, ...rest] = part.split('</mark>');
+      if (highlightedPart.length > 0) {
+        segments.push({ text: highlightedPart, highlighted: true });
+      }
+      const trailing = rest.join('</mark>');
+      if (trailing.length > 0) {
+        segments.push({ text: trailing, highlighted: false });
+      }
+    }
+
+    return segments;
   }
 </script>
 
@@ -83,6 +110,17 @@
               </span>
             </div>
             <p class="title">{entryTitle(entry.title)}</p>
+            {#if query.trim().length > 0 && snippets[entry.id]}
+              <p class="snippet">
+                {#each parseSnippet(snippets[entry.id]) as segment}
+                  {#if segment.highlighted}
+                    <mark>{segment.text}</mark>
+                  {:else}
+                    {segment.text}
+                  {/if}
+                {/each}
+              </p>
+            {/if}
             {#if entry.tags.length > 0}
               <div class="tags">
                 {#each entry.tags as tag (tag.id)}
@@ -204,6 +242,20 @@
     line-height: 1.35;
     color: #0f172a;
     font-weight: 600;
+  }
+
+  .snippet {
+    margin: 0 0 0.4rem;
+    color: #334155;
+    font-size: 0.8rem;
+    line-height: 1.35;
+  }
+
+  .snippet mark {
+    background: #fef08a;
+    color: inherit;
+    border-radius: 0.2rem;
+    padding: 0 0.12rem;
   }
 
   .mood {
