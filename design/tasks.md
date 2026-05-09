@@ -127,7 +127,7 @@ This task list is based on the current implementation review against `design/mvp
 - [x] Add 10,000-entry fixture generator.
 - [x] Add search performance benchmark with 300ms target.
 - [x] Add timeline first-page performance benchmark with 300ms target.
-- [ ] Add 50,000-character editor performance scenario.
+- [x] Add 50,000-character editor performance scenario.
 - [ ] Add export performance scenario for 10,000 entries.
 - [ ] Configure CI for Rust format, clippy, unit tests, and integration tests.
 - [ ] Configure CI for frontend type check, lint, build, and Tauri build.
