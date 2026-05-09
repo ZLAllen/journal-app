@@ -120,6 +120,7 @@ This task list is based on the current implementation review against `design/mvp
 
 - [x] Add visible focus indicators for all interactive controls.
 - [ ] Add accessible names for toolbar, mood, tag, search, filter, settings, export, and delete controls.
+- Existing toolbar, mood, tag, search, filter, and delete controls are now explicitly named; settings/export control naming remains pending until those screens are implemented.
 - [x] Ensure rich text editor has a meaningful label and does not trap keyboard focus.
 - [ ] Verify text contrast meets WCAG 2.1 AA intent.
 - [ ] Verify core flows work at 150% text scaling.

@@ -83,11 +83,22 @@
           </div>
           <div class="actions">
             {#if renamingId === tag.id}
-              <button type="button" on:click={() => submitRename(tag.id)}>Save</button>
-              <button type="button" on:click={cancelRename}>Cancel</button>
+              <button type="button" aria-label={`Save rename for ${tag.name}`} on:click={() => submitRename(tag.id)}>
+                Save
+              </button>
+              <button type="button" aria-label={`Cancel rename for ${tag.name}`} on:click={cancelRename}>
+                Cancel
+              </button>
             {:else}
-              <button type="button" on:click={() => startRename(tag)}>Rename</button>
-              <button type="button" class="danger" on:click={() => confirmDelete(tag.id, tag.name)}>
+              <button type="button" aria-label={`Rename tag ${tag.name}`} on:click={() => startRename(tag)}>
+                Rename
+              </button>
+              <button
+                type="button"
+                class="danger"
+                aria-label={`Delete tag ${tag.name}`}
+                on:click={() => confirmDelete(tag.id, tag.name)}
+              >
                 Delete
               </button>
             {/if}
