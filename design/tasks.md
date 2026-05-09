@@ -125,7 +125,7 @@ This task list is based on the current implementation review against `design/mvp
 - [ ] Verify core flows work at 150% text scaling.
 - [x] Add 10,000-entry fixture generator.
 - [x] Add search performance benchmark with 300ms target.
-- [ ] Add timeline first-page performance benchmark with 300ms target.
+- [x] Add timeline first-page performance benchmark with 300ms target.
 - [ ] Add 50,000-character editor performance scenario.
 - [ ] Add export performance scenario for 10,000 entries.
 - [ ] Configure CI for Rust format, clippy, unit tests, and integration tests.
@@ -357,4 +357,5 @@ Exit criteria:
 - The existing `title` field is treated as implementation drift unless the product spec is revised to include titles.
 - SQLCipher-compatible database encryption is required before the app can be considered MVP-ready.
 - If SQLCipher support proves infeasible, storage work should stop for an explicit encryption redesign rather than shipping plaintext journal content.
+- Timeline benchmark snapshot on May 9, 2026: `benchmark_timeline_first_page` against a 10,000-entry fixture measured 427.62ms average (target: <300ms), so timeline load optimization remains open.
 - This file is a planning and acceptance-tracking artifact; it does not itself implement application behavior.
