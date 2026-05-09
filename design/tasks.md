@@ -92,11 +92,11 @@ This task list is based on the current implementation review against `design/mvp
 - [x] Replace placeholder `Search.svelte` with real search UI.
 - [x] Add no-results empty state.
 - [x] Add `Ctrl+F` to focus search.
-- [ ] Add tag management screen.
-- [ ] Show tag entry counts.
-- [ ] Add rename tag UI.
-- [ ] Add delete tag UI with confirmation.
-- [ ] Enforce trimmed, non-empty, case-insensitive unique tag names.
+- [x] Add tag management screen.
+- [x] Show tag entry counts.
+- [x] Add rename tag UI.
+- [x] Add delete tag UI with confirmation.
+- [x] Enforce trimmed, non-empty, case-insensitive unique tag names.
 
 ### Stats, Settings, Export, and Data Deletion
 
@@ -241,8 +241,8 @@ Exit criteria:
 - [x] Implement backend search command.
 - [ ] Implement search UI with highlighted snippets.
 - [x] Implement date, tag, and mood filters.
-- [ ] Implement tag management screen.
-- [ ] Implement tag rename/delete behavior in the UI.
+- [x] Implement tag management screen.
+- [x] Implement tag rename/delete behavior in the UI.
 - [ ] Add 10,000-entry fixture generator.
 - [ ] Add search performance benchmark.
 

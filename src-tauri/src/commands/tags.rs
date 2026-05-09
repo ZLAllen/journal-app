@@ -1,12 +1,42 @@
 use crate::db::DbConnection;
-use crate::models::{Result, Tag};
+use crate::models::{AppError, Result, Tag};
 use rusqlite::params;
 use std::collections::HashMap;
 
+fn normalize_tag_name(name: &str) -> String {
+    name.trim().to_string()
+}
+
+fn ensure_tag_name_valid(name: &str) -> Result<()> {
+    if name.is_empty() {
+        return Err(AppError::InvalidInput(
+            "Tag name must not be empty".to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
 /// Create a new tag
 pub fn create_tag(db: &DbConnection, name: String) -> Result<Tag> {
-    let tag = Tag::new(name.clone());
+    let normalized_name = normalize_tag_name(&name);
+    ensure_tag_name_valid(&normalized_name)?;
     let conn = db.conn();
+
+    let duplicate_exists: bool = conn.query_row(
+        "SELECT COUNT(*) FROM tags WHERE lower(name) = lower(?1)",
+        params![&normalized_name],
+        |row| Ok(row.get::<_, i32>(0)? > 0),
+    )?;
+
+    if duplicate_exists {
+        return Err(AppError::InvalidInput(format!(
+            "Tag '{}' already exists",
+            normalized_name
+        )));
+    }
+
+    let tag = Tag::new(normalized_name.clone());
 
     conn.execute(
         "INSERT INTO tags (id, name) VALUES (?1, ?2)",
@@ -34,6 +64,8 @@ pub fn delete_tag(db: &DbConnection, id: String) -> Result<()> {
 /// Rename a tag
 pub fn rename_tag(db: &DbConnection, id: String, new_name: String) -> Result<Tag> {
     let conn = db.conn();
+    let normalized_name = normalize_tag_name(&new_name);
+    ensure_tag_name_valid(&normalized_name)?;
 
     // Check if tag exists
     let exists: bool = conn.query_row(
@@ -49,12 +81,25 @@ pub fn rename_tag(db: &DbConnection, id: String, new_name: String) -> Result<Tag
         )));
     }
 
-    conn.execute(
-        "UPDATE tags SET name = ?1 WHERE id = ?2",
-        params![&new_name, &id],
+    let duplicate_exists: bool = conn.query_row(
+        "SELECT COUNT(*) FROM tags WHERE lower(name) = lower(?1) AND id != ?2",
+        params![&normalized_name, &id],
+        |row| Ok(row.get::<_, i32>(0)? > 0),
     )?;
 
-    Ok(Tag::from_row(id, new_name))
+    if duplicate_exists {
+        return Err(AppError::InvalidInput(format!(
+            "Tag '{}' already exists",
+            normalized_name
+        )));
+    }
+
+    conn.execute(
+        "UPDATE tags SET name = ?1 WHERE id = ?2",
+        params![&normalized_name, &id],
+    )?;
+
+    Ok(Tag::from_row(id, normalized_name))
 }
 
 /// Assign a tag to an entry
@@ -204,7 +249,7 @@ mod tests {
     #[test]
     fn test_create_tag() {
         let db = setup_db();
-        let tag = create_tag(&db, "work".to_string()).expect("Failed to create tag");
+        let tag = create_tag(&db, "  work  ".to_string()).expect("Failed to create tag");
 
         assert!(!tag.id.is_empty());
         assert_eq!(tag.name, "work");
@@ -219,6 +264,31 @@ mod tests {
             rename_tag(&db, tag.id.clone(), "personal".to_string()).expect("Failed to rename tag");
 
         assert_eq!(renamed.name, "personal");
+    }
+
+    #[test]
+    fn test_create_tag_rejects_empty_name() {
+        let db = setup_db();
+        let result = create_tag(&db, "   ".to_string());
+        assert!(matches!(result, Err(AppError::InvalidInput(_))));
+    }
+
+    #[test]
+    fn test_create_tag_rejects_case_insensitive_duplicates() {
+        let db = setup_db();
+        create_tag(&db, "Work".to_string()).expect("Failed to create first tag");
+        let result = create_tag(&db, "work".to_string());
+        assert!(matches!(result, Err(AppError::InvalidInput(_))));
+    }
+
+    #[test]
+    fn test_rename_tag_rejects_duplicate_name() {
+        let db = setup_db();
+        let first = create_tag(&db, "Work".to_string()).expect("Failed to create first tag");
+        let second = create_tag(&db, "Home".to_string()).expect("Failed to create second tag");
+
+        let result = rename_tag(&db, second.id, first.name);
+        assert!(matches!(result, Err(AppError::InvalidInput(_))));
     }
 
     #[test]

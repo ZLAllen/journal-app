@@ -2,6 +2,7 @@
   import { onDestroy, onMount } from 'svelte';
   import Editor from './routes/Editor.svelte';
   import Search from './routes/Search.svelte';
+  import TagManager from './routes/TagManager.svelte';
   import Timeline from './routes/Timeline.svelte';
   import { api, isAppError, type Entry, type Tag } from './lib/api';
 
@@ -26,6 +27,7 @@
   let searchTimer: ReturnType<typeof setTimeout> | null = null;
   let searchRevision = 0;
   let searchPanel: Search | null = null;
+  let tagCounts: Record<string, number> = {};
   let filters: SearchFilters = {
     dateFrom: '',
     dateTo: '',
@@ -34,6 +36,8 @@
   };
 
   const SEARCH_DELAY_MS = 250;
+
+  $: tagCounts = buildTagCounts(entries);
 
   $: selectedEntry =
     visibleEntries.find((entry) => entry.id === selectedEntryId) ?? (visibleEntries[0] ?? null);
@@ -117,6 +121,16 @@
     });
   }
 
+  function buildTagCounts(items: EntryWithTags[]): Record<string, number> {
+    const counts: Record<string, number> = {};
+    for (const entry of items) {
+      for (const tag of entry.tags) {
+        counts[tag.id] = (counts[tag.id] ?? 0) + 1;
+      }
+    }
+    return counts;
+  }
+
   async function createNewEntry(): Promise<void> {
     error = '';
 
@@ -178,6 +192,55 @@
 
   function onAllTagsUpdated(event: CustomEvent<Tag[]>): void {
     allTags = event.detail;
+  }
+
+  async function onTagRenamed(event: CustomEvent<{ id: string; name: string }>): Promise<void> {
+    const { id, name } = event.detail;
+    error = '';
+    try {
+      const renamed = await api.renameTag(id, name);
+      allTags = allTags
+        .map((tag) => (tag.id === renamed.id ? renamed : tag))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      entries = entries.map((entry) => ({
+        ...entry,
+        tags: entry.tags
+          .map((tag) => (tag.id === renamed.id ? renamed : tag))
+          .sort((a, b) => a.name.localeCompare(b.name))
+      }));
+      visibleEntries = visibleEntries.map((entry) => ({
+        ...entry,
+        tags: entry.tags
+          .map((tag) => (tag.id === renamed.id ? renamed : tag))
+          .sort((a, b) => a.name.localeCompare(b.name))
+      }));
+      void queueSearch(searchQuery);
+    } catch (renameError: unknown) {
+      error = `Failed to rename tag. ${errorMessage(renameError)}`;
+    }
+  }
+
+  async function onTagDeleted(event: CustomEvent<{ id: string }>): Promise<void> {
+    const { id } = event.detail;
+    error = '';
+    try {
+      await api.deleteTag(id);
+      allTags = allTags.filter((tag) => tag.id !== id);
+      entries = entries.map((entry) => ({
+        ...entry,
+        tags: entry.tags.filter((tag) => tag.id !== id)
+      }));
+      visibleEntries = visibleEntries.map((entry) => ({
+        ...entry,
+        tags: entry.tags.filter((tag) => tag.id !== id)
+      }));
+      if (filters.tagId === id) {
+        filters = { ...filters, tagId: '' };
+      }
+      void queueSearch(searchQuery);
+    } catch (deleteError: unknown) {
+      error = `Failed to delete tag. ${errorMessage(deleteError)}`;
+    }
   }
 
   function onEntryDeleted(event: CustomEvent<{ entryId: string }>): void {
@@ -286,6 +349,13 @@
       noResults={!searching && visibleEntries.length === 0 && (searchQuery.trim().length > 0 || hasActiveFilters())}
       on:queryChange={onSearchQueryChange}
       on:filtersChange={onFiltersChange}
+    />
+
+    <TagManager
+      tags={allTags}
+      counts={tagCounts}
+      on:rename={onTagRenamed}
+      on:delete={onTagDeleted}
     />
 
     <section class="layout">
