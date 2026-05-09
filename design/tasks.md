@@ -124,7 +124,7 @@ This task list is based on the current implementation review against `design/mvp
 - [ ] Verify text contrast meets WCAG 2.1 AA intent.
 - [ ] Verify core flows work at 150% text scaling.
 - [x] Add 10,000-entry fixture generator.
-- [ ] Add search performance benchmark with 300ms target.
+- [x] Add search performance benchmark with 300ms target.
 - [ ] Add timeline first-page performance benchmark with 300ms target.
 - [ ] Add 50,000-character editor performance scenario.
 - [ ] Add export performance scenario for 10,000 entries.
@@ -244,7 +244,7 @@ Exit criteria:
 - [x] Implement tag management screen.
 - [x] Implement tag rename/delete behavior in the UI.
 - [x] Add 10,000-entry fixture generator.
-- [ ] Add search performance benchmark.
+- [x] Add search performance benchmark.
 
 Exit criteria:
 
