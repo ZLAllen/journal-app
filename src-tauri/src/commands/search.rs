@@ -35,13 +35,12 @@ pub fn search_entries(
     let mut stmt = conn.prepare(
         "WITH matched AS (
             SELECT
-                e.rowid AS rowid,
-                snippet(entries_fts, 0, '<mark>', '</mark>', ' ... ', 12) AS snippet
+                e.rowid AS rowid
             FROM entries_fts
             JOIN entries e ON e.rowid = entries_fts.rowid
             WHERE e.deleted_at IS NULL
               AND entries_fts MATCH ?1
-            ORDER BY bm25(entries_fts), e.created_at DESC
+            ORDER BY e.created_at DESC
             LIMIT ?2 OFFSET ?3
          )
          SELECT
@@ -56,9 +55,11 @@ pub fn search_entries(
             '' AS body_html,
             '' AS body_text,
             e.word_count,
-            matched.snippet
+            snippet(entries_fts, 0, '<mark>', '</mark>', ' ... ', 12)
          FROM matched
+         JOIN entries_fts ON entries_fts.rowid = matched.rowid
          JOIN entries e ON e.rowid = matched.rowid
+         WHERE entries_fts MATCH ?1
          ORDER BY e.created_at DESC",
     )?;
 

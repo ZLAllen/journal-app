@@ -329,7 +329,7 @@ Exit criteria:
 - [x] Seed 10,000 entries.
 - [x] Include mixed body lengths up to 50,000 characters.
 - [x] Include mixed moods and tags.
-- [ ] Verify search under 300ms.
+- [x] Verify search under 300ms.
 - [x] Verify timeline first page under 300ms after unlock.
 - [ ] Verify export of 10,000 entries completes without crash.
 
@@ -358,5 +358,5 @@ Exit criteria:
 - SQLCipher-compatible database encryption is required before the app can be considered MVP-ready.
 - If SQLCipher support proves infeasible, storage work should stop for an explicit encryption redesign rather than shipping plaintext journal content.
 - Timeline benchmark snapshot on May 9, 2026: `benchmark_timeline_first_page` against a 10,000-entry fixture measured 427.62ms average before index work, then 167.50ms average after adding timeline/filter indexes (target: <300ms).
-- Search benchmark snapshot on May 9, 2026: `benchmark_search` against a 10,000-entry fixture measured 531.08ms average for query `entry`; after search payload optimization in the same session, average improved to 466.25ms (target: <300ms), so search optimization remains open.
+- Search benchmark snapshot on May 9, 2026: `benchmark_search` against a 10,000-entry fixture measured 531.08ms average for query `entry`; after query-path and payload optimizations in the same session, average improved to 466.25ms and then to 84.75ms (target: <300ms).
 - This file is a planning and acceptance-tracking artifact; it does not itself implement application behavior.
