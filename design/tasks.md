@@ -358,5 +358,5 @@ Exit criteria:
 - SQLCipher-compatible database encryption is required before the app can be considered MVP-ready.
 - If SQLCipher support proves infeasible, storage work should stop for an explicit encryption redesign rather than shipping plaintext journal content.
 - Timeline benchmark snapshot on May 9, 2026: `benchmark_timeline_first_page` against a 10,000-entry fixture measured 427.62ms average (target: <300ms), so timeline load optimization remains open.
-- Search benchmark snapshot on May 9, 2026: `benchmark_search` against a 10,000-entry fixture measured 531.08ms average for query `entry` (target: <300ms), so search optimization remains open.
+- Search benchmark snapshot on May 9, 2026: `benchmark_search` against a 10,000-entry fixture measured 531.08ms average for query `entry`; after search payload optimization in the same session, average improved to 466.25ms (target: <300ms), so search optimization remains open.
 - This file is a planning and acceptance-tracking artifact; it does not itself implement application behavior.

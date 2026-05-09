@@ -33,25 +33,33 @@ pub fn search_entries(
 
     let conn = db.conn();
     let mut stmt = conn.prepare(
-        "SELECT
+        "WITH matched AS (
+            SELECT
+                e.rowid AS rowid,
+                snippet(entries_fts, 0, '<mark>', '</mark>', ' ... ', 12) AS snippet
+            FROM entries_fts
+            JOIN entries e ON e.rowid = entries_fts.rowid
+            WHERE e.deleted_at IS NULL
+              AND entries_fts MATCH ?1
+            ORDER BY bm25(entries_fts), e.created_at DESC
+            LIMIT ?2 OFFSET ?3
+         )
+         SELECT
             e.id,
             e.created_at,
             e.updated_at,
             e.title,
-            e.body,
+            '' AS body,
             e.mood,
             e.pinned,
             e.deleted_at,
-            e.body_html,
-            e.body_text,
+            '' AS body_html,
+            '' AS body_text,
             e.word_count,
-            snippet(entries_fts, 0, '<mark>', '</mark>', ' ... ', 18)
-         FROM entries_fts
-         JOIN entries e ON e.rowid = entries_fts.rowid
-         WHERE e.deleted_at IS NULL
-           AND entries_fts MATCH ?1
-         ORDER BY bm25(entries_fts), e.created_at DESC
-         LIMIT ?2 OFFSET ?3",
+            matched.snippet
+         FROM matched
+         JOIN entries e ON e.rowid = matched.rowid
+         ORDER BY e.created_at DESC",
     )?;
 
     let rows = stmt.query_map(
