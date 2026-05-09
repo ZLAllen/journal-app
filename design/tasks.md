@@ -59,7 +59,7 @@ This task list is based on the current implementation review against `design/mvp
 - [ ] Add required indexes for timeline, created date, mood, and entry-tag lookup.
 - [x] Implement structured app error serialization with stable error codes.
 - [ ] Align command names and payloads with the MVP command specification.
-- [ ] Add request validation for mood range, entry length, tag names, limits, offsets, and delete confirmation.
+- [x] Add request validation for mood range, entry length, tag names, limits, offsets, and delete confirmation.
 
 ### Entries, Editor, Timeline, and Autosave
 

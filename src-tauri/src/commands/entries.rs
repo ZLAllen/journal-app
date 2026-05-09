@@ -1,5 +1,5 @@
 use crate::db::DbConnection;
-use crate::models::{Entry, Result};
+use crate::models::{AppError, Entry, Result};
 use chrono::Utc;
 use rusqlite::params;
 
@@ -216,6 +216,27 @@ fn count_words(input: &str) -> i32 {
         .count() as i32
 }
 
+const MAX_ENTRY_BODY_CHARS: usize = 50_000;
+
+fn validate_entry_payload(body: &str, mood: Option<i32>) -> Result<()> {
+    if let Some(mood_value) = mood {
+        if !(1..=5).contains(&mood_value) {
+            return Err(AppError::InvalidInput(
+                "Mood must be between 1 and 5".to_string(),
+            ));
+        }
+    }
+
+    if body.chars().count() > MAX_ENTRY_BODY_CHARS {
+        return Err(AppError::InvalidInput(format!(
+            "Entry body must be at most {} characters",
+            MAX_ENTRY_BODY_CHARS
+        )));
+    }
+
+    Ok(())
+}
+
 /// Create a new journal entry
 pub fn create_entry(
     db: &DbConnection,
@@ -223,6 +244,7 @@ pub fn create_entry(
     body: String,
     mood: Option<i32>,
 ) -> Result<Entry> {
+    validate_entry_payload(&body, mood)?;
     let body_projection = project_body(&body);
     let mut entry = Entry::new(title.clone(), body_projection.html.clone(), mood);
     entry.body_html = body_projection.html;
@@ -265,6 +287,7 @@ pub fn update_entry(
     mood: Option<i32>,
     created_at: Option<i64>,
 ) -> Result<Entry> {
+    validate_entry_payload(&body, mood)?;
     let now = Utc::now().timestamp_millis();
     let body_projection = project_body(&body);
     let conn = db.conn();
@@ -486,6 +509,26 @@ mod tests {
     }
 
     #[test]
+    fn test_create_entry_rejects_invalid_mood() {
+        let db = setup_db();
+        let result = create_entry(
+            &db,
+            "Invalid mood".to_string(),
+            "<p>Body</p>".to_string(),
+            Some(6),
+        );
+        assert!(matches!(result, Err(AppError::InvalidInput(_))));
+    }
+
+    #[test]
+    fn test_create_entry_rejects_body_over_limit() {
+        let db = setup_db();
+        let oversized = "a".repeat(MAX_ENTRY_BODY_CHARS + 1);
+        let result = create_entry(&db, "Too long".to_string(), oversized, None);
+        assert!(matches!(result, Err(AppError::InvalidInput(_))));
+    }
+
+    #[test]
     fn test_get_entries() {
         let db = setup_db();
         create_entry(&db, "Entry 1".to_string(), "Body 1".to_string(), Some(1)).unwrap();
@@ -526,6 +569,23 @@ mod tests {
             updated.updated_at >= entry.updated_at,
             "updated_at should be at least as recent as the original timestamp"
         );
+    }
+
+    #[test]
+    fn test_update_entry_rejects_invalid_mood() {
+        let db = setup_db();
+        let entry = create_entry(&db, "Mood test".to_string(), "Body".to_string(), Some(3))
+            .expect("Failed to create entry");
+
+        let result = update_entry(
+            &db,
+            entry.id,
+            "Mood test".to_string(),
+            "Body".to_string(),
+            Some(0),
+            None,
+        );
+        assert!(matches!(result, Err(AppError::InvalidInput(_))));
     }
 
     #[test]
