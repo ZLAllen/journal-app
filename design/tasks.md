@@ -123,7 +123,7 @@ This task list is based on the current implementation review against `design/mvp
 - [x] Ensure rich text editor has a meaningful label and does not trap keyboard focus.
 - [ ] Verify text contrast meets WCAG 2.1 AA intent.
 - [ ] Verify core flows work at 150% text scaling.
-- [ ] Add 10,000-entry fixture generator.
+- [x] Add 10,000-entry fixture generator.
 - [ ] Add search performance benchmark with 300ms target.
 - [ ] Add timeline first-page performance benchmark with 300ms target.
 - [ ] Add 50,000-character editor performance scenario.
@@ -243,7 +243,7 @@ Exit criteria:
 - [x] Implement date, tag, and mood filters.
 - [x] Implement tag management screen.
 - [x] Implement tag rename/delete behavior in the UI.
-- [ ] Add 10,000-entry fixture generator.
+- [x] Add 10,000-entry fixture generator.
 - [ ] Add search performance benchmark.
 
 Exit criteria:
