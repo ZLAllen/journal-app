@@ -34,6 +34,29 @@ export interface SearchResult {
   snippet: string;
 }
 
+export interface EntrySummary {
+  id: string;
+  created_at: number;
+  updated_at: number;
+  title: string;
+  mood: number | null;
+  pinned: boolean;
+  word_count: number;
+}
+
+export interface ListEntriesFilters {
+  date_from_ms?: number;
+  date_to_ms?: number;
+  mood?: number;
+  pinned?: boolean;
+  tag_id?: string;
+}
+
+export interface ListEntriesResponse {
+  entries: EntrySummary[];
+  next_cursor: string | null;
+}
+
 export interface SearchEntriesResponse {
   results: SearchResult[];
   elapsed_ms: number;
@@ -92,6 +115,14 @@ export const api = {
     invoke<void>('remove_tag_from_entry', { entry_id, tag_id }),
   getAllEntryTags: () => invoke<Record<string, Tag[]>>('get_all_entry_tags'),
   getSummaryStats: () => invoke<SummaryStats>('get_summary_stats'),
+  listEntries: (
+    cursor: string | null = null,
+    limit: number = 50,
+    filters: ListEntriesFilters | null = null
+  ) =>
+    invoke<ListEntriesResponse>('list_entries', {
+      payload: { cursor, limit, filters }
+    }),
   searchEntries: (query: string, limit: number = 50, offset: number = 0) =>
     invoke<SearchEntriesResponse>('search_entries', {
       payload: { query, limit, offset }

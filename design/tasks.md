@@ -164,7 +164,7 @@ type AppError = {
 - [ ] `update_entry({ id, body_html?, mood?, created_at_ms?, pinned?, tag_names? })` returns `Entry`.
 - [x] `delete_entry({ id })` returns `{ ok: true }`.
 - [x] `get_entry({ id })` returns `Entry`.
-- [ ] `list_entries({ cursor?, limit?, filters? })` returns `{ entries: EntrySummary[], next_cursor? }`.
+- [x] `list_entries({ cursor?, limit?, filters? })` returns `{ entries: EntrySummary[], next_cursor? }`.
 - [x] `set_entry_pinned({ id, pinned })` returns `Entry`.
 
 ### Search, Tag, Stats, Export, and Data Commands

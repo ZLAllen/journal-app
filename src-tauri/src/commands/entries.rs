@@ -217,6 +217,77 @@ fn count_words(input: &str) -> i32 {
 }
 
 const MAX_ENTRY_BODY_CHARS: usize = 50_000;
+const DEFAULT_LIST_LIMIT: i64 = 50;
+const MAX_LIST_LIMIT: i64 = 200;
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct EntrySummary {
+    pub id: String,
+    pub created_at: i64,
+    pub updated_at: i64,
+    pub title: String,
+    pub mood: Option<i32>,
+    pub pinned: bool,
+    pub word_count: i32,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
+pub struct ListEntriesFilters {
+    pub date_from_ms: Option<i64>,
+    pub date_to_ms: Option<i64>,
+    pub mood: Option<i32>,
+    pub pinned: Option<bool>,
+    pub tag_id: Option<String>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ListEntriesResponse {
+    pub entries: Vec<EntrySummary>,
+    pub next_cursor: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ListCursor {
+    pinned: i32,
+    created_at: i64,
+    id: String,
+}
+
+impl ListCursor {
+    fn parse(raw: &str) -> Result<Self> {
+        let mut parts = raw.splitn(3, '|');
+        let pinned = parts
+            .next()
+            .ok_or_else(|| AppError::InvalidInput("Invalid cursor format".to_string()))?
+            .parse::<i32>()
+            .map_err(|_| AppError::InvalidInput("Invalid cursor pinned value".to_string()))?;
+        let created_at = parts
+            .next()
+            .ok_or_else(|| AppError::InvalidInput("Invalid cursor format".to_string()))?
+            .parse::<i64>()
+            .map_err(|_| AppError::InvalidInput("Invalid cursor timestamp".to_string()))?;
+        let id = parts
+            .next()
+            .ok_or_else(|| AppError::InvalidInput("Invalid cursor format".to_string()))?
+            .to_string();
+
+        if !(0..=1).contains(&pinned) || id.is_empty() {
+            return Err(AppError::InvalidInput(
+                "Invalid cursor component values".to_string(),
+            ));
+        }
+
+        Ok(Self {
+            pinned,
+            created_at,
+            id,
+        })
+    }
+
+    fn encode(&self) -> String {
+        format!("{}|{}|{}", self.pinned, self.created_at, self.id)
+    }
+}
 
 fn validate_entry_payload(body: &str, mood: Option<i32>) -> Result<()> {
     if let Some(mood_value) = mood {
@@ -385,6 +456,126 @@ pub fn get_entries(db: &DbConnection) -> Result<Vec<Entry>> {
     }
 
     Ok(result)
+}
+
+pub fn list_entries(
+    db: &DbConnection,
+    cursor: Option<String>,
+    limit: Option<i64>,
+    filters: Option<ListEntriesFilters>,
+) -> Result<ListEntriesResponse> {
+    let effective_limit = limit.unwrap_or(DEFAULT_LIST_LIMIT);
+    if !(1..=MAX_LIST_LIMIT).contains(&effective_limit) {
+        return Err(AppError::InvalidInput(format!(
+            "Limit must be between 1 and {}",
+            MAX_LIST_LIMIT
+        )));
+    }
+
+    let parsed_cursor = match cursor {
+        Some(raw) => Some(ListCursor::parse(&raw)?),
+        None => None,
+    };
+    let effective_filters = filters.unwrap_or_default();
+    if let Some(mood) = effective_filters.mood {
+        if !(1..=5).contains(&mood) {
+            return Err(AppError::InvalidInput(
+                "Mood must be between 1 and 5".to_string(),
+            ));
+        }
+    }
+
+    let cursor_pinned = parsed_cursor.as_ref().map(|value| value.pinned);
+    let cursor_created_at = parsed_cursor.as_ref().map(|value| value.created_at);
+    let cursor_id = parsed_cursor.as_ref().map(|value| value.id.clone());
+    let filter_pinned = effective_filters
+        .pinned
+        .map(|value| if value { 1 } else { 0 });
+    let fetch_limit = effective_limit + 1;
+
+    let conn = db.conn();
+    let mut stmt = conn.prepare(
+        "SELECT
+            id,
+            created_at,
+            updated_at,
+            title,
+            mood,
+            pinned,
+            word_count
+         FROM entries
+         WHERE deleted_at IS NULL
+           AND (?1 IS NULL OR created_at >= ?1)
+           AND (?2 IS NULL OR created_at <= ?2)
+           AND (?3 IS NULL OR mood = ?3)
+           AND (?4 IS NULL OR pinned = ?4)
+           AND (?5 IS NULL OR EXISTS (
+                SELECT 1
+                FROM entry_tags et
+                WHERE et.entry_id = entries.id
+                  AND et.tag_id = ?5
+           ))
+           AND (?6 IS NULL OR (
+                pinned < ?6 OR
+                (pinned = ?6 AND created_at < ?7) OR
+                (pinned = ?6 AND created_at = ?7 AND id < ?8)
+           ))
+         ORDER BY pinned DESC, created_at DESC, id DESC
+         LIMIT ?9",
+    )?;
+
+    let rows = stmt.query_map(
+        params![
+            effective_filters.date_from_ms,
+            effective_filters.date_to_ms,
+            effective_filters.mood,
+            filter_pinned,
+            effective_filters.tag_id,
+            cursor_pinned,
+            cursor_created_at,
+            cursor_id,
+            fetch_limit
+        ],
+        |row| {
+            Ok(EntrySummary {
+                id: row.get(0)?,
+                created_at: row.get(1)?,
+                updated_at: row.get(2)?,
+                title: row.get(3)?,
+                mood: row.get(4)?,
+                pinned: row.get::<_, i32>(5)? != 0,
+                word_count: row.get(6)?,
+            })
+        },
+    )?;
+
+    let mut all_rows = Vec::new();
+    for row in rows {
+        all_rows.push(row?);
+    }
+
+    let has_more = all_rows.len() as i64 > effective_limit;
+    if has_more {
+        all_rows.truncate(effective_limit as usize);
+    }
+
+    let next_cursor = if has_more {
+        all_rows.last().map(|entry| {
+            ListCursor {
+                pinned: if entry.pinned { 1 } else { 0 },
+                created_at: entry.created_at,
+                id: entry.id.clone(),
+            }
+            .encode()
+        })
+    } else {
+        None
+    };
+
+    Ok(ListEntriesResponse {
+        entries: all_rows,
+        next_cursor,
+    })
 }
 
 /// Get a single entry by ID

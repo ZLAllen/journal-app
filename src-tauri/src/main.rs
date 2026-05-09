@@ -60,6 +60,13 @@ struct SearchEntriesPayload {
     offset: Option<i64>,
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
+struct ListEntriesPayload {
+    cursor: Option<String>,
+    limit: Option<i64>,
+    filters: Option<commands::entries::ListEntriesFilters>,
+}
+
 #[derive(serde::Serialize)]
 struct OkResponse {
     ok: bool,
@@ -223,6 +230,15 @@ fn search_entries(
 }
 
 #[tauri::command]
+fn list_entries(
+    payload: ListEntriesPayload,
+    state: State<'_, AppState>,
+) -> Result<commands::entries::ListEntriesResponse, AppError> {
+    let db_guard = lock_db(&state)?;
+    commands::entries::list_entries(&db_guard, payload.cursor, payload.limit, payload.filters)
+}
+
+#[tauri::command]
 fn get_summary_stats(state: State<'_, AppState>) -> Result<models::SummaryStats, AppError> {
     let db_guard = lock_db(&state)?;
     commands::stats::get_summary_stats(&db_guard)
@@ -264,6 +280,7 @@ fn main() {
             remove_tag_from_entry,
             get_all_entry_tags,
             search_entries,
+            list_entries,
             get_summary_stats,
         ])
         .run(tauri::generate_context!())

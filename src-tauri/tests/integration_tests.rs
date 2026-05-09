@@ -326,3 +326,47 @@ fn integration_tag_rename_delete_updates_tags_without_deleting_entries() {
         "Tag lifecycle".to_string()
     );
 }
+
+#[test]
+fn integration_list_entries_supports_cursor_and_filters() {
+    let db = setup_db();
+
+    let e1 = entries::create_entry(&db, "Pinned".to_string(), "<p>one</p>".to_string(), Some(5))
+        .expect("create e1");
+    let e2 = entries::create_entry(&db, "Mood3".to_string(), "<p>two</p>".to_string(), Some(3))
+        .expect("create e2");
+    let e3 = entries::create_entry(
+        &db,
+        "Mood2".to_string(),
+        "<p>three</p>".to_string(),
+        Some(2),
+    )
+    .expect("create e3");
+
+    let _ = entries::set_pinned(&db, e1.id.clone(), true).expect("set pinned");
+    entries::delete_entry(&db, e3.id.clone()).expect("soft delete e3");
+
+    let first_page = entries::list_entries(&db, None, Some(1), None).expect("list page 1");
+    assert_eq!(first_page.entries.len(), 1);
+    assert_eq!(first_page.entries[0].id, e1.id);
+    assert!(first_page.next_cursor.is_some());
+
+    let second_page =
+        entries::list_entries(&db, first_page.next_cursor, Some(1), None).expect("list page 2");
+    assert_eq!(second_page.entries.len(), 1);
+    assert_eq!(second_page.entries[0].id, e2.id);
+    assert!(second_page.next_cursor.is_none());
+
+    let mood_filtered = entries::list_entries(
+        &db,
+        None,
+        Some(10),
+        Some(entries::ListEntriesFilters {
+            mood: Some(5),
+            ..Default::default()
+        }),
+    )
+    .expect("list mood filtered");
+    assert_eq!(mood_filtered.entries.len(), 1);
+    assert_eq!(mood_filtered.entries[0].id, e1.id);
+}
