@@ -332,7 +332,7 @@ Exit criteria:
 - [x] Include mixed moods and tags.
 - [x] Verify search under 300ms.
 - [x] Verify timeline first page under 300ms after unlock.
-- [ ] Verify export of 10,000 entries completes without crash.
+- [x] Verify export of 10,000 entries completes without crash.
 
 ### Manual QA Checklist
 
@@ -360,4 +360,5 @@ Exit criteria:
 - If SQLCipher support proves infeasible, storage work should stop for an explicit encryption redesign rather than shipping plaintext journal content.
 - Timeline benchmark snapshot on May 9, 2026: `benchmark_timeline_first_page` against a 10,000-entry fixture measured 427.62ms average before index work, then 167.50ms average after adding timeline/filter indexes (target: <300ms).
 - Search benchmark snapshot on May 9, 2026: `benchmark_search` against a 10,000-entry fixture measured 531.08ms average for query `entry`; after query-path and payload optimizations in the same session, average improved to 466.25ms and then to 84.75ms (target: <300ms).
+- Export benchmark snapshot on May 9, 2026: `benchmark_export_10k` exported 10,000 entries to JSON in 4951ms without crash (`/tmp/journal-export-10k.json`, 210,709,563 bytes).
 - This file is a planning and acceptance-tracking artifact; it does not itself implement application behavior.
