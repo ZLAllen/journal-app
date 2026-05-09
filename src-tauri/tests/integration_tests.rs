@@ -482,3 +482,80 @@ fn integration_fts_sync_on_insert_update_soft_delete_and_hard_delete() {
             .expect("search after hard delete");
     assert!(after_hard_delete.results.is_empty());
 }
+
+#[test]
+fn integration_search_filtering_combinations() {
+    let db = setup_db();
+
+    let now = chrono::Local::now();
+    let day_1 = chrono::Local
+        .with_ymd_and_hms(now.year(), now.month(), now.day(), 9, 0, 0)
+        .single()
+        .expect("valid day 1")
+        .timestamp_millis();
+    let day_2 = (chrono::Local
+        .with_ymd_and_hms(now.year(), now.month(), now.day(), 9, 0, 0)
+        .single()
+        .expect("valid day 2 base")
+        - chrono::Duration::days(1))
+    .timestamp_millis();
+
+    let entry_a = entries::create_entry(
+        &db,
+        "Search combo A".to_string(),
+        "<p>focuscombo keyword</p>".to_string(),
+        Some(4),
+    )
+    .expect("create entry A");
+    let entry_b = entries::create_entry(
+        &db,
+        "Search combo B".to_string(),
+        "<p>focuscombo keyword</p>".to_string(),
+        Some(2),
+    )
+    .expect("create entry B");
+
+    entries::update_entry(
+        &db,
+        entry_a.id.clone(),
+        entry_a.title.clone(),
+        entry_a.body.clone(),
+        entry_a.mood,
+        Some(day_1),
+    )
+    .expect("backdate A");
+    entries::update_entry(
+        &db,
+        entry_b.id.clone(),
+        entry_b.title.clone(),
+        entry_b.body.clone(),
+        entry_b.mood,
+        Some(day_2),
+    )
+    .expect("backdate B");
+
+    let tag_focus = tags::create_tag(&db, "combo-focus".to_string()).expect("create tag");
+    tags::assign_tag_to_entry(&db, entry_a.id.clone(), tag_focus.id.clone()).expect("tag A");
+    tags::assign_tag_to_entry(&db, entry_b.id.clone(), tag_focus.id.clone()).expect("tag B");
+
+    let search_results = search::search_entries(&db, "focuscombo".to_string(), Some(20), Some(0))
+        .expect("search results");
+    assert_eq!(search_results.results.len(), 2);
+
+    let list_filtered = entries::list_entries(
+        &db,
+        None,
+        Some(20),
+        Some(entries::ListEntriesFilters {
+            date_from_ms: Some(day_1 - 1000),
+            date_to_ms: Some(day_1 + 1000),
+            mood: Some(4),
+            tag_id: Some(tag_focus.id),
+            ..Default::default()
+        }),
+    )
+    .expect("filtered listing");
+
+    assert_eq!(list_filtered.entries.len(), 1);
+    assert_eq!(list_filtered.entries[0].id, entry_a.id);
+}

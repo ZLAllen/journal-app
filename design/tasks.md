@@ -321,7 +321,7 @@ Exit criteria:
 - [ ] Soft-deleted entries are excluded from list, search, stats, and export.
 - [x] Tag attach, remove, rename, and delete.
 - [x] FTS trigger sync on insert, update, soft delete, and hard delete.
-- [ ] Search filtering combinations.
+- [x] Search filtering combinations.
 - [ ] JSON export schema.
 - [ ] Delete-all-data using a temporary app data directory.
 
