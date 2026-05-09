@@ -27,6 +27,22 @@ pub struct Tag {
     pub name: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TopTag {
+    pub id: String,
+    pub name: String,
+    pub usage_count: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SummaryStats {
+    pub writing_streak_days: i32,
+    pub total_entries: i32,
+    pub total_word_count: i32,
+    pub entries_this_month: i32,
+    pub top_tags: Vec<TopTag>,
+}
+
 /// Represents the association between an entry and a tag
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EntryTag {

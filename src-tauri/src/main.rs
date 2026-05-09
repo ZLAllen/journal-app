@@ -222,6 +222,12 @@ fn search_entries(
     commands::search::search_entries(&db_guard, payload.query, payload.limit, payload.offset)
 }
 
+#[tauri::command]
+fn get_summary_stats(state: State<'_, AppState>) -> Result<models::SummaryStats, AppError> {
+    let db_guard = lock_db(&state)?;
+    commands::stats::get_summary_stats(&db_guard)
+}
+
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
@@ -258,6 +264,7 @@ fn main() {
             remove_tag_from_entry,
             get_all_entry_tags,
             search_entries,
+            get_summary_stats,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

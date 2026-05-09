@@ -1,3 +1,4 @@
+use chrono::{Datelike, TimeZone};
 use journal::commands::{entries, search, tags};
 use journal::db::DbConnection;
 use std::fs;
@@ -174,4 +175,110 @@ fn integration_formatting_persists_after_db_reopen() {
     }
 
     fs::remove_file(db_path).expect("Failed to remove temporary DB file");
+}
+
+#[test]
+fn integration_summary_stats_returns_expected_aggregates() {
+    let db = setup_db();
+
+    let now = chrono::Local::now();
+    let today_ms = chrono::Local
+        .with_ymd_and_hms(now.year(), now.month(), now.day(), 9, 0, 0)
+        .single()
+        .expect("valid today")
+        .timestamp_millis();
+    let yesterday_ms = (chrono::Local
+        .with_ymd_and_hms(now.year(), now.month(), now.day(), 9, 0, 0)
+        .single()
+        .expect("valid yesterday anchor")
+        - chrono::Duration::days(1))
+    .timestamp_millis();
+    let two_days_ago_ms = (chrono::Local
+        .with_ymd_and_hms(now.year(), now.month(), now.day(), 9, 0, 0)
+        .single()
+        .expect("valid two days anchor")
+        - chrono::Duration::days(2))
+    .timestamp_millis();
+
+    let entry_a = entries::create_entry(
+        &db,
+        "A".to_string(),
+        "<p>alpha beta gamma</p>".to_string(),
+        Some(4),
+    )
+    .expect("create A");
+    let entry_b = entries::create_entry(
+        &db,
+        "B".to_string(),
+        "<p>delta epsilon</p>".to_string(),
+        Some(3),
+    )
+    .expect("create B");
+    let entry_c = entries::create_entry(&db, "C".to_string(), "<p>zeta</p>".to_string(), Some(2))
+        .expect("create C");
+    let entry_deleted = entries::create_entry(
+        &db,
+        "Deleted".to_string(),
+        "<p>should not count</p>".to_string(),
+        Some(1),
+    )
+    .expect("create deleted");
+
+    entries::update_entry(
+        &db,
+        entry_a.id.clone(),
+        entry_a.title.clone(),
+        entry_a.body.clone(),
+        entry_a.mood,
+        Some(today_ms),
+    )
+    .expect("set date A");
+    entries::update_entry(
+        &db,
+        entry_b.id.clone(),
+        entry_b.title.clone(),
+        entry_b.body.clone(),
+        entry_b.mood,
+        Some(yesterday_ms),
+    )
+    .expect("set date B");
+    entries::update_entry(
+        &db,
+        entry_c.id.clone(),
+        entry_c.title.clone(),
+        entry_c.body.clone(),
+        entry_c.mood,
+        Some(two_days_ago_ms),
+    )
+    .expect("set date C");
+    entries::update_entry(
+        &db,
+        entry_deleted.id.clone(),
+        entry_deleted.title.clone(),
+        entry_deleted.body.clone(),
+        entry_deleted.mood,
+        Some(today_ms),
+    )
+    .expect("set date deleted");
+
+    entries::delete_entry(&db, entry_deleted.id.clone()).expect("delete entry");
+
+    let tag_focus = tags::create_tag(&db, "focus".to_string()).expect("create focus");
+    let tag_work = tags::create_tag(&db, "work".to_string()).expect("create work");
+
+    tags::assign_tag_to_entry(&db, entry_a.id.clone(), tag_focus.id.clone()).expect("tag A focus");
+    tags::assign_tag_to_entry(&db, entry_b.id.clone(), tag_focus.id.clone()).expect("tag B focus");
+    tags::assign_tag_to_entry(&db, entry_c.id, tag_work.id.clone()).expect("tag C work");
+
+    let stats = journal::commands::stats::get_summary_stats(&db).expect("stats");
+
+    assert_eq!(stats.writing_streak_days, 3);
+    assert_eq!(stats.total_entries, 3);
+    assert_eq!(stats.total_word_count, 6);
+    assert_eq!(stats.entries_this_month, 3);
+    assert_eq!(stats.top_tags.len(), 2);
+    assert_eq!(stats.top_tags[0].name, "focus");
+    assert_eq!(stats.top_tags[0].usage_count, 2);
+    assert_eq!(stats.top_tags[1].name, "work");
+    assert_eq!(stats.top_tags[1].usage_count, 1);
 }

@@ -100,12 +100,12 @@ This task list is based on the current implementation review against `design/mvp
 
 ### Stats, Settings, Export, and Data Deletion
 
-- [ ] Add `get_summary_stats` command.
-- [ ] Implement writing streak using local calendar dates.
-- [ ] Implement total entries count.
-- [ ] Implement total word count.
-- [ ] Implement entries-this-month count.
-- [ ] Implement top 10 tags.
+- [x] Add `get_summary_stats` command.
+- [x] Implement writing streak using local calendar dates.
+- [x] Implement total entries count.
+- [x] Implement total word count.
+- [x] Implement entries-this-month count.
+- [x] Implement top 10 tags.
 - [ ] Add settings screen.
 - [ ] Add privacy/about copy matching MVP requirements.
 - [ ] Add JSON export command using `journal_mvp_export_v1`.
@@ -174,7 +174,7 @@ type AppError = {
 - [x] `create_tag({ name })` returns `Tag`.
 - [x] `rename_tag({ id, name })` returns `Tag`.
 - [x] `delete_tag({ id })` returns `{ ok: true }`.
-- [ ] `get_summary_stats()` returns `SummaryStats`.
+- [x] `get_summary_stats()` returns `SummaryStats`.
 - [ ] `export_json({ path })` returns `{ ok: true, path: string }`.
 - [ ] `delete_all_data({ confirmation })` returns `{ ok: true }`.
 
@@ -274,8 +274,8 @@ Exit criteria:
 
 ### Phase 5: Stats, Accessibility, Packaging, and Release Candidate
 
-- [ ] Implement writing streak.
-- [ ] Implement total entries, total word count, entries this month, and top 10 tags.
+- [x] Implement writing streak.
+- [x] Implement total entries, total word count, entries this month, and top 10 tags.
 - [x] Implement `Ctrl+F`.
 - [ ] Complete empty states and onboarding copy.
 - [ ] Run accessibility checklist.
@@ -305,7 +305,7 @@ Exit criteria:
 - [x] HTML sanitization.
 - [x] Plain-text extraction.
 - [x] Word count calculation.
-- [ ] Date grouping and writing streak calculation.
+- [x] Date grouping and writing streak calculation.
 - [ ] Tag normalization.
 - [ ] Input validation.
 - [ ] Structured error mapping.

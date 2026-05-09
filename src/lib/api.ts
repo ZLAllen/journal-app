@@ -39,6 +39,20 @@ export interface SearchEntriesResponse {
   elapsed_ms: number;
 }
 
+export interface TopTag {
+  id: string;
+  name: string;
+  usage_count: number;
+}
+
+export interface SummaryStats {
+  writing_streak_days: number;
+  total_entries: number;
+  total_word_count: number;
+  entries_this_month: number;
+  top_tags: TopTag[];
+}
+
 export function isAppError(error: unknown): error is AppError {
   return (
     typeof error === 'object' &&
@@ -77,6 +91,7 @@ export const api = {
   removeTagFromEntry: (entry_id: string, tag_id: string) =>
     invoke<void>('remove_tag_from_entry', { entry_id, tag_id }),
   getAllEntryTags: () => invoke<Record<string, Tag[]>>('get_all_entry_tags'),
+  getSummaryStats: () => invoke<SummaryStats>('get_summary_stats'),
   searchEntries: (query: string, limit: number = 50, offset: number = 0) =>
     invoke<SearchEntriesResponse>('search_entries', {
       payload: { query, limit, offset }
