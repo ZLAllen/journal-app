@@ -224,13 +224,13 @@ Exit criteria:
 - [x] Add delete entry UI.
 - [ ] Implement lifecycle autosave flush on navigation, close, lock, and `Ctrl+S`.
 - [x] Add `Ctrl+N`.
-- [ ] Ensure formatting persists after restart.
+- [x] Ensure formatting persists after restart.
 - [ ] Ensure no plaintext entry content appears in logs.
 
 Exit criteria:
 
 - [ ] User can create, edit, auto-save, backdate, tag, mood-log, pin, and delete entries.
-- [ ] Formatting persists after restart.
+- [x] Formatting persists after restart.
 - [ ] Autosave meets the 5-second and lifecycle requirements.
 - [ ] No plaintext entry content is logged.
 

@@ -1,5 +1,7 @@
 use journal::commands::{entries, search, tags};
 use journal::db::DbConnection;
+use std::fs;
+use uuid::Uuid;
 
 fn setup_db() -> DbConnection {
     DbConnection::new_memory().expect("Failed to create in-memory test DB")
@@ -143,4 +145,33 @@ fn integration_get_entry_returns_none_after_delete() {
 
     let after_delete = entries::get_entry(&db, entry.id).expect("get_entry should succeed");
     assert!(after_delete.is_none());
+}
+
+#[test]
+fn integration_formatting_persists_after_db_reopen() {
+    let db_path = std::env::temp_dir().join(format!("journal-test-{}.db", Uuid::new_v4()));
+    let db_path_str = db_path.to_string_lossy().to_string();
+
+    {
+        let db = DbConnection::new(&db_path_str).expect("Failed to create file-backed DB");
+        entries::create_entry(
+            &db,
+            "Formatted".to_string(),
+            "<p>Hello <strong>world</strong> <em>today</em></p>".to_string(),
+            Some(4),
+        )
+        .expect("create_entry should succeed");
+    }
+
+    {
+        let reopened = DbConnection::new(&db_path_str).expect("Failed to reopen file-backed DB");
+        let all = entries::get_entries(&reopened).expect("get_entries should succeed");
+        assert_eq!(all.len(), 1);
+        assert_eq!(
+            all[0].body_html,
+            "<p>Hello <strong>world</strong> <em>today</em></p>"
+        );
+    }
+
+    fs::remove_file(db_path).expect("Failed to remove temporary DB file");
 }
