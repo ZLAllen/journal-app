@@ -56,7 +56,7 @@ This task list is based on the current implementation review against `design/mvp
 - [ ] Decide whether to remove `title` as implementation drift or revise the MVP spec to include it.
 - [ ] Add `app_meta` schema-version storage.
 - [ ] Add tag timestamp fields: `created_at_ms` and `updated_at_ms`.
-- [ ] Add required indexes for timeline, created date, mood, and entry-tag lookup.
+- [x] Add required indexes for timeline, created date, mood, and entry-tag lookup.
 - [x] Implement structured app error serialization with stable error codes.
 - [ ] Align command names and payloads with the MVP command specification.
 - [x] Add request validation for mood range, entry length, tag names, limits, offsets, and delete confirmation.
@@ -330,7 +330,7 @@ Exit criteria:
 - [x] Include mixed body lengths up to 50,000 characters.
 - [x] Include mixed moods and tags.
 - [ ] Verify search under 300ms.
-- [ ] Verify timeline first page under 300ms after unlock.
+- [x] Verify timeline first page under 300ms after unlock.
 - [ ] Verify export of 10,000 entries completes without crash.
 
 ### Manual QA Checklist
@@ -357,6 +357,6 @@ Exit criteria:
 - The existing `title` field is treated as implementation drift unless the product spec is revised to include titles.
 - SQLCipher-compatible database encryption is required before the app can be considered MVP-ready.
 - If SQLCipher support proves infeasible, storage work should stop for an explicit encryption redesign rather than shipping plaintext journal content.
-- Timeline benchmark snapshot on May 9, 2026: `benchmark_timeline_first_page` against a 10,000-entry fixture measured 427.62ms average (target: <300ms), so timeline load optimization remains open.
+- Timeline benchmark snapshot on May 9, 2026: `benchmark_timeline_first_page` against a 10,000-entry fixture measured 427.62ms average before index work, then 167.50ms average after adding timeline/filter indexes (target: <300ms).
 - Search benchmark snapshot on May 9, 2026: `benchmark_search` against a 10,000-entry fixture measured 531.08ms average for query `entry`; after search payload optimization in the same session, average improved to 466.25ms (target: <300ms), so search optimization remains open.
 - This file is a planning and acceptance-tracking artifact; it does not itself implement application behavior.
