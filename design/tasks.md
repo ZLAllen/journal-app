@@ -250,7 +250,7 @@ Exit criteria:
 
 - [ ] Search returns results in under 300ms against seeded 10,000-entry data.
 - [x] Soft-deleted entries do not appear in search or filters.
-- [ ] Tag rename/delete updates correctly without deleting entries.
+- [x] Tag rename/delete updates correctly without deleting entries.
 
 ### Phase 4: Security Settings, Export, and Delete Data
 
@@ -318,7 +318,7 @@ Exit criteria:
 - [ ] Migration idempotency against the MVP schema.
 - [ ] Create, update, get, list, pin, backdate, and delete entry.
 - [ ] Soft-deleted entries are excluded from list, search, stats, and export.
-- [ ] Tag attach, remove, rename, and delete.
+- [x] Tag attach, remove, rename, and delete.
 - [ ] FTS trigger sync on insert, update, soft delete, and hard delete.
 - [ ] Search filtering combinations.
 - [ ] JSON export schema.

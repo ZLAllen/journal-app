@@ -282,3 +282,47 @@ fn integration_summary_stats_returns_expected_aggregates() {
     assert_eq!(stats.top_tags[1].name, "work");
     assert_eq!(stats.top_tags[1].usage_count, 1);
 }
+
+#[test]
+fn integration_tag_rename_delete_updates_tags_without_deleting_entries() {
+    let db = setup_db();
+
+    let entry = entries::create_entry(
+        &db,
+        "Tag lifecycle".to_string(),
+        "<p>entry should survive tag changes</p>".to_string(),
+        Some(4),
+    )
+    .expect("create entry");
+
+    let original_tag = tags::create_tag(&db, "Work".to_string()).expect("create tag");
+    tags::assign_tag_to_entry(&db, entry.id.clone(), original_tag.id.clone()).expect("assign tag");
+
+    let renamed = tags::rename_tag(&db, original_tag.id.clone(), "Deep Work".to_string())
+        .expect("rename tag");
+    assert_eq!(renamed.name, "Deep Work");
+
+    let tags_after_rename = tags::get_tags_for_entry(&db, entry.id.clone()).expect("get tags");
+    assert_eq!(tags_after_rename.len(), 1);
+    assert_eq!(tags_after_rename[0].id, original_tag.id);
+    assert_eq!(tags_after_rename[0].name, "Deep Work");
+
+    let loaded_after_rename = entries::get_entry(&db, entry.id.clone()).expect("get entry");
+    assert!(loaded_after_rename.is_some());
+    assert_eq!(
+        loaded_after_rename.expect("entry exists").title,
+        "Tag lifecycle".to_string()
+    );
+
+    tags::delete_tag(&db, original_tag.id.clone()).expect("delete tag");
+
+    let tags_after_delete = tags::get_tags_for_entry(&db, entry.id.clone()).expect("get tags");
+    assert!(tags_after_delete.is_empty());
+
+    let loaded_after_delete = entries::get_entry(&db, entry.id).expect("get entry");
+    assert!(loaded_after_delete.is_some());
+    assert_eq!(
+        loaded_after_delete.expect("entry exists").title,
+        "Tag lifecycle".to_string()
+    );
+}
