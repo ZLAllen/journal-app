@@ -417,3 +417,68 @@ fn integration_list_entries_supports_cursor_and_filters() {
     assert_eq!(mood_filtered.entries.len(), 1);
     assert_eq!(mood_filtered.entries[0].id, e1.id);
 }
+
+#[test]
+fn integration_fts_sync_on_insert_update_soft_delete_and_hard_delete() {
+    let db = setup_db();
+
+    let entry = entries::create_entry(
+        &db,
+        "FTS lifecycle".to_string(),
+        "<p>alphatoken initial</p>".to_string(),
+        Some(3),
+    )
+    .expect("create entry");
+
+    let inserted = search::search_entries(&db, "alphatoken".to_string(), Some(10), Some(0))
+        .expect("search after insert");
+    assert_eq!(inserted.results.len(), 1);
+    assert_eq!(inserted.results[0].entry.id, entry.id);
+
+    let _updated = entries::update_entry(
+        &db,
+        entry.id.clone(),
+        "FTS lifecycle updated".to_string(),
+        "<p>betatoken updated</p>".to_string(),
+        Some(4),
+        None,
+    )
+    .expect("update entry");
+
+    let old_term = search::search_entries(&db, "alphatoken".to_string(), Some(10), Some(0))
+        .expect("search old term after update");
+    assert!(old_term.results.is_empty());
+
+    let new_term = search::search_entries(&db, "betatoken".to_string(), Some(10), Some(0))
+        .expect("search new term after update");
+    assert_eq!(new_term.results.len(), 1);
+    assert_eq!(new_term.results[0].entry.id, entry.id);
+
+    entries::delete_entry(&db, entry.id.clone()).expect("soft delete entry");
+    let after_soft_delete = search::search_entries(&db, "betatoken".to_string(), Some(10), Some(0))
+        .expect("search after soft delete");
+    assert!(after_soft_delete.results.is_empty());
+
+    let hard_delete_entry = entries::create_entry(
+        &db,
+        "FTS hard delete".to_string(),
+        "<p>gammatoken hard delete</p>".to_string(),
+        Some(2),
+    )
+    .expect("create hard delete entry");
+    let before_hard_delete =
+        search::search_entries(&db, "gammatoken".to_string(), Some(10), Some(0))
+            .expect("search before hard delete");
+    assert_eq!(before_hard_delete.results.len(), 1);
+
+    db.conn()
+        .execute(
+            "DELETE FROM entries WHERE id = ?1",
+            [hard_delete_entry.id.clone()],
+        )
+        .expect("hard delete entry");
+    let after_hard_delete =
+        search::search_entries(&db, "gammatoken".to_string(), Some(10), Some(0))
+            .expect("search after hard delete");
+    assert!(after_hard_delete.results.is_empty());
+}
