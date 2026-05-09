@@ -730,6 +730,35 @@ mod tests {
     }
 
     #[test]
+    fn test_list_entries_rejects_invalid_limit() {
+        let db = setup_db();
+        let result = list_entries(&db, None, Some(0), None);
+        assert!(matches!(result, Err(AppError::InvalidInput(_))));
+    }
+
+    #[test]
+    fn test_list_entries_rejects_invalid_cursor() {
+        let db = setup_db();
+        let result = list_entries(&db, Some("bad-cursor".to_string()), Some(10), None);
+        assert!(matches!(result, Err(AppError::InvalidInput(_))));
+    }
+
+    #[test]
+    fn test_list_entries_rejects_invalid_filter_mood() {
+        let db = setup_db();
+        let result = list_entries(
+            &db,
+            None,
+            Some(10),
+            Some(ListEntriesFilters {
+                mood: Some(6),
+                ..Default::default()
+            }),
+        );
+        assert!(matches!(result, Err(AppError::InvalidInput(_))));
+    }
+
+    #[test]
     fn test_update_entry() {
         let db = setup_db();
         let entry = create_entry(

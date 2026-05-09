@@ -47,6 +47,53 @@ fn integration_entry_crud_flow() {
 }
 
 #[test]
+fn integration_entry_lifecycle_includes_get_list_pin_backdate_and_delete() {
+    let db = setup_db();
+
+    let created = entries::create_entry(
+        &db,
+        "Lifecycle".to_string(),
+        "<p>initial body</p>".to_string(),
+        Some(3),
+    )
+    .expect("create entry should succeed");
+
+    let loaded = entries::get_entry(&db, created.id.clone())
+        .expect("get_entry should succeed")
+        .expect("entry should exist");
+    assert_eq!(loaded.id, created.id);
+
+    let backdated = created.created_at - (2 * 24 * 60 * 60 * 1000);
+    let updated = entries::update_entry(
+        &db,
+        created.id.clone(),
+        "Lifecycle Updated".to_string(),
+        "<p>updated body</p>".to_string(),
+        Some(4),
+        Some(backdated),
+    )
+    .expect("update_entry should succeed");
+    assert_eq!(updated.title, "Lifecycle Updated");
+    assert_eq!(updated.created_at, backdated);
+
+    let pinned = entries::set_pinned(&db, created.id.clone(), true).expect("pin should succeed");
+    assert!(pinned.pinned);
+
+    let listed = entries::list_entries(&db, None, Some(10), None).expect("list should succeed");
+    assert_eq!(listed.entries.len(), 1);
+    assert_eq!(listed.entries[0].id, created.id);
+    assert!(listed.entries[0].pinned);
+    assert_eq!(listed.entries[0].mood, Some(4));
+    assert!(listed.next_cursor.is_none());
+
+    entries::delete_entry(&db, created.id.clone()).expect("delete should succeed");
+
+    let listed_after_delete =
+        entries::list_entries(&db, None, Some(10), None).expect("list should succeed");
+    assert!(listed_after_delete.entries.is_empty());
+}
+
+#[test]
 fn integration_tags_assignment_flow() {
     let db = setup_db();
 

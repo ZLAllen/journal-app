@@ -307,7 +307,7 @@ Exit criteria:
 - [x] Word count calculation.
 - [x] Date grouping and writing streak calculation.
 - [ ] Tag normalization.
-- [ ] Input validation.
+- [x] Input validation.
 - [ ] Structured error mapping.
 - [ ] KDF config serialization.
 
@@ -316,7 +316,7 @@ Exit criteria:
 - [ ] Encrypted database setup and unlock.
 - [ ] Locked commands return `LOCKED`.
 - [ ] Migration idempotency against the MVP schema.
-- [ ] Create, update, get, list, pin, backdate, and delete entry.
+- [x] Create, update, get, list, pin, backdate, and delete entry.
 - [ ] Soft-deleted entries are excluded from list, search, stats, and export.
 - [x] Tag attach, remove, rename, and delete.
 - [ ] FTS trigger sync on insert, update, soft delete, and hard delete.
