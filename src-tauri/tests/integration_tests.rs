@@ -1,4 +1,4 @@
-use journal::commands::{entries, tags};
+use journal::commands::{entries, search, tags};
 use journal::db::DbConnection;
 
 fn setup_db() -> DbConnection {
@@ -94,4 +94,32 @@ fn integration_deleted_entries_not_returned() {
     let results = entries::get_entries(&db).expect("get_entries should succeed");
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].id, keep.id);
+}
+
+#[test]
+fn integration_deleted_entries_excluded_from_search_results() {
+    let db = setup_db();
+
+    let keep = entries::create_entry(
+        &db,
+        "Keep".to_string(),
+        "<p>visible keyword entry</p>".to_string(),
+        None,
+    )
+    .expect("create_entry should succeed");
+    let remove = entries::create_entry(
+        &db,
+        "Remove".to_string(),
+        "<p>visible keyword removed</p>".to_string(),
+        None,
+    )
+    .expect("create_entry should succeed");
+
+    entries::delete_entry(&db, remove.id).expect("delete_entry should succeed");
+
+    let search_results = search::search_entries(&db, "keyword".to_string(), Some(20), Some(0))
+        .expect("search_entries should succeed");
+
+    assert_eq!(search_results.results.len(), 1);
+    assert_eq!(search_results.results[0].entry.id, keep.id);
 }

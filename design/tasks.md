@@ -88,7 +88,7 @@ This task list is based on the current implementation review against `design/mvp
 - [x] Add date range filter.
 - [x] Add tag filter.
 - [x] Add mood filter.
-- [ ] Exclude soft-deleted entries from all search and filter results.
+- [x] Exclude soft-deleted entries from all search and filter results.
 - [x] Replace placeholder `Search.svelte` with real search UI.
 - [x] Add no-results empty state.
 - [x] Add `Ctrl+F` to focus search.
@@ -249,7 +249,7 @@ Exit criteria:
 Exit criteria:
 
 - [ ] Search returns results in under 300ms against seeded 10,000-entry data.
-- [ ] Soft-deleted entries do not appear in search or filters.
+- [x] Soft-deleted entries do not appear in search or filters.
 - [ ] Tag rename/delete updates correctly without deleting entries.
 
 ### Phase 4: Security Settings, Export, and Delete Data
