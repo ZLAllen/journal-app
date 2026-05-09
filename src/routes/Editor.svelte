@@ -3,7 +3,7 @@
   import { Editor } from '@tiptap/core';
   import StarterKit from '@tiptap/starter-kit';
   import type { Entry, Tag } from '../lib/api';
-  import { api, isAppError } from '../lib/api';
+  import { api, userMessageForError } from '../lib/api';
 
   type EntryWithTags = Entry & { tags: Tag[] };
   type SaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
@@ -312,7 +312,11 @@
       }
     } catch (error: unknown) {
       saveState = 'error';
-      saveError = errorMessage(error);
+      saveError = userMessageForError(error, {
+        defaultMessage: 'Failed to save entry.',
+        invalidInputMessage: 'Entry data is invalid. Review fields and try again.',
+        notFoundMessage: 'Entry no longer exists.'
+      });
     } finally {
       stopAutosaveProgress();
       saveInFlight = false;
@@ -398,7 +402,10 @@
       dispatch('entrySaved', { entry: updatedEntry, tags: entryTags });
     } catch (error: unknown) {
       saveState = 'error';
-      saveError = errorMessage(error);
+      saveError = userMessageForError(error, {
+        defaultMessage: 'Failed to update pin state.',
+        notFoundMessage: 'Entry no longer exists.'
+      });
     }
   }
 
@@ -420,7 +427,10 @@
       dirty = false;
     } catch (error: unknown) {
       saveState = 'error';
-      saveError = errorMessage(error);
+      saveError = userMessageForError(error, {
+        defaultMessage: 'Failed to delete entry.',
+        notFoundMessage: 'Entry no longer exists.'
+      });
     }
   }
 
@@ -471,14 +481,6 @@
 
   function hasUnsavedChanges(): boolean {
     return dirty || saveInFlight || saveState === 'pending' || saveState === 'error';
-  }
-
-  function errorMessage(error: unknown): string {
-    if (isAppError(error)) {
-      return error.message;
-    }
-
-    return error instanceof Error ? error.message : String(error);
   }
 
   function onTagKeydown(event: KeyboardEvent): void {

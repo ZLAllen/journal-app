@@ -4,7 +4,7 @@
   import Search from './routes/Search.svelte';
   import TagManager from './routes/TagManager.svelte';
   import Timeline from './routes/Timeline.svelte';
-  import { api, isAppError, type Entry, type Tag } from './lib/api';
+  import { api, userMessageForError, type Entry, type Tag } from './lib/api';
 
   type EntryWithTags = Entry & { tags: Tag[] };
   type SearchFilters = {
@@ -76,7 +76,10 @@
         selectedEntryId = entries[0].id;
       }
     } catch (loadError: unknown) {
-      error = `Failed to load entries. ${errorMessage(loadError)}`;
+      error = userMessageForError(loadError, {
+        defaultMessage: 'Failed to load entries.',
+        databaseMessage: 'Failed to load entries from local database.'
+      });
     } finally {
       loading = false;
     }
@@ -143,7 +146,10 @@
       void queueSearch(searchQuery);
       selectedEntryId = entry.id;
     } catch (createError: unknown) {
-      error = `Failed to create a new entry. ${errorMessage(createError)}`;
+      error = userMessageForError(createError, {
+        defaultMessage: 'Failed to create a new entry.',
+        invalidInputMessage: 'Entry data was invalid. Review fields and try again.'
+      });
     }
   }
 
@@ -162,14 +168,6 @@
       event.preventDefault();
       searchPanel?.focusSearch();
     }
-  }
-
-  function errorMessage(error: unknown): string {
-    if (isAppError(error)) {
-      return error.message;
-    }
-
-    return error instanceof Error ? error.message : String(error);
   }
 
   function onEntrySelect(event: CustomEvent<string>): void {
@@ -218,7 +216,11 @@
       }));
       void queueSearch(searchQuery);
     } catch (renameError: unknown) {
-      error = `Failed to rename tag. ${errorMessage(renameError)}`;
+      error = userMessageForError(renameError, {
+        defaultMessage: 'Failed to rename tag.',
+        invalidInputMessage: 'Tag name is invalid or already exists.',
+        notFoundMessage: 'Tag not found.'
+      });
     }
   }
 
@@ -241,7 +243,10 @@
       }
       void queueSearch(searchQuery);
     } catch (deleteError: unknown) {
-      error = `Failed to delete tag. ${errorMessage(deleteError)}`;
+      error = userMessageForError(deleteError, {
+        defaultMessage: 'Failed to delete tag.',
+        notFoundMessage: 'Tag not found.'
+      });
     }
   }
 
@@ -319,7 +324,10 @@
         visibleEntries = [];
         searchElapsedMs = null;
         searchSnippets = {};
-        error = `Search failed. ${errorMessage(searchError)}`;
+        error = userMessageForError(searchError, {
+          defaultMessage: 'Search failed.',
+          invalidInputMessage: 'Search query is invalid.'
+        });
       } finally {
         if (revision === searchRevision) {
           searching = false;

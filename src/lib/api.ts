@@ -86,6 +86,39 @@ export function isAppError(error: unknown): error is AppError {
   );
 }
 
+type ErrorFallback = {
+  defaultMessage: string;
+  notFoundMessage?: string;
+  invalidInputMessage?: string;
+  databaseMessage?: string;
+  corruptionMessage?: string;
+  stateLockMessage?: string;
+};
+
+export function userMessageForError(error: unknown, fallback: ErrorFallback): string {
+  if (!isAppError(error)) {
+    return error instanceof Error ? error.message : fallback.defaultMessage;
+  }
+
+  switch (error.code) {
+    case 'NOT_FOUND':
+      return fallback.notFoundMessage ?? error.message;
+    case 'INVALID_INPUT':
+      return fallback.invalidInputMessage ?? error.message;
+    case 'DATABASE':
+      return fallback.databaseMessage ?? 'Database operation failed. Try again.';
+    case 'CORRUPT_DATABASE':
+      return (
+        fallback.corruptionMessage ??
+        'Database integrity issue detected. Restore from backup or reinitialize local data.'
+      );
+    case 'STATE_LOCK':
+      return fallback.stateLockMessage ?? 'Application state is busy. Try again.';
+    default:
+      return error.message || fallback.defaultMessage;
+  }
+}
+
 export const api = {
   createEntry: (title: string, body: string, mood: number | null = null) =>
     invoke<Entry>('create_entry', { payload: { title, body, mood } }),

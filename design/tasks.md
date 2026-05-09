@@ -183,7 +183,7 @@ type AppError = {
 - [ ] Update frontend entry types from current `title/body` shape to MVP `body_html/body_text/word_count` shape.
 - [ ] Keep `title` only if the design spec is explicitly revised to include entry titles.
 - [ ] Add typed request and response wrappers for each Tauri command.
-- [ ] Map structured backend errors to user-facing UI states.
+- [x] Map structured backend errors to user-facing UI states.
 
 ## Phased Development Plan
 
@@ -308,7 +308,7 @@ Exit criteria:
 - [x] Date grouping and writing streak calculation.
 - [ ] Tag normalization.
 - [x] Input validation.
-- [ ] Structured error mapping.
+- [x] Structured error mapping.
 - [ ] KDF config serialization.
 
 ### Integration Tests to Add
