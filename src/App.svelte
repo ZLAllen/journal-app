@@ -6,6 +6,12 @@
   import { api, isAppError, type Entry, type Tag } from './lib/api';
 
   type EntryWithTags = Entry & { tags: Tag[] };
+  type SearchFilters = {
+    dateFrom: string;
+    dateTo: string;
+    tagId: string;
+    mood: string;
+  };
 
   let entries: EntryWithTags[] = [];
   let visibleEntries: EntryWithTags[] = [];
@@ -20,13 +26,19 @@
   let searchTimer: ReturnType<typeof setTimeout> | null = null;
   let searchRevision = 0;
   let searchPanel: Search | null = null;
+  let filters: SearchFilters = {
+    dateFrom: '',
+    dateTo: '',
+    tagId: '',
+    mood: ''
+  };
 
   const SEARCH_DELAY_MS = 250;
 
   $: selectedEntry =
     visibleEntries.find((entry) => entry.id === selectedEntryId) ?? (visibleEntries[0] ?? null);
 
-  $: if (!searching && searchQuery.trim().length === 0) {
+  $: if (!searching && searchQuery.trim().length === 0 && !hasActiveFilters()) {
     visibleEntries = entries;
     searchElapsedMs = null;
   }
@@ -79,6 +91,32 @@
     return b.created_at - a.created_at;
   }
 
+  function applyFilters(items: EntryWithTags[]): EntryWithTags[] {
+    const fromTime = filters.dateFrom ? new Date(`${filters.dateFrom}T00:00:00`).getTime() : null;
+    const toTime = filters.dateTo ? new Date(`${filters.dateTo}T23:59:59.999`).getTime() : null;
+    const moodValue = filters.mood ? Number(filters.mood) : null;
+
+    return items.filter((entry) => {
+      if (fromTime !== null && entry.created_at < fromTime) {
+        return false;
+      }
+
+      if (toTime !== null && entry.created_at > toTime) {
+        return false;
+      }
+
+      if (filters.tagId && !entry.tags.some((tag) => tag.id === filters.tagId)) {
+        return false;
+      }
+
+      if (moodValue !== null && entry.mood !== moodValue) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
   async function createNewEntry(): Promise<void> {
     error = '';
 
@@ -86,11 +124,7 @@
       const entry = await api.createEntry('', '<p></p>', null);
       const withNoTags: EntryWithTags = { ...entry, tags: [] };
       entries = [withNoTags, ...entries].sort(sortEntries);
-      if (searchQuery.trim().length === 0) {
-        visibleEntries = entries;
-      } else {
-        void queueSearch(searchQuery);
-      }
+      void queueSearch(searchQuery);
       selectedEntryId = entry.id;
     } catch (createError: unknown) {
       error = `Failed to create a new entry. ${errorMessage(createError)}`;
@@ -132,17 +166,14 @@
       .map((item) => (item.id === entry.id ? { ...entry, tags } : item))
       .sort(sortEntries);
 
-    if (searchQuery.trim().length === 0) {
-      visibleEntries = entries;
-    } else {
-      void queueSearch(searchQuery);
-    }
+    void queueSearch(searchQuery);
   }
 
   function onTagsUpdated(event: CustomEvent<{ entryId: string; tags: Tag[] }>): void {
     const { entryId, tags } = event.detail;
     entries = entries.map((item) => (item.id === entryId ? { ...item, tags } : item));
     visibleEntries = visibleEntries.map((item) => (item.id === entryId ? { ...item, tags } : item));
+    void queueSearch(searchQuery);
   }
 
   function onAllTagsUpdated(event: CustomEvent<Tag[]>): void {
@@ -170,6 +201,15 @@
     void queueSearch(searchQuery);
   }
 
+  function onFiltersChange(event: CustomEvent<SearchFilters>): void {
+    filters = event.detail;
+    void queueSearch(searchQuery);
+  }
+
+  function hasActiveFilters(): boolean {
+    return Boolean(filters.dateFrom || filters.dateTo || filters.tagId || filters.mood);
+  }
+
   async function queueSearch(query: string): Promise<void> {
     const trimmed = query.trim();
     searchRevision += 1;
@@ -182,7 +222,7 @@
 
     if (trimmed.length === 0) {
       searching = false;
-      visibleEntries = entries;
+      visibleEntries = applyFilters(entries);
       searchElapsedMs = null;
       return;
     }
@@ -197,9 +237,10 @@
 
         const ids = response.results.map((result) => result.entry.id);
         const byId = new Map(entries.map((entry) => [entry.id, entry]));
-        visibleEntries = ids
+        const matchedEntries = ids
           .map((id) => byId.get(id))
           .filter((entry): entry is EntryWithTags => Boolean(entry));
+        visibleEntries = applyFilters(matchedEntries);
         searchElapsedMs = response.elapsed_ms;
       } catch (searchError: unknown) {
         if (revision !== searchRevision) {
@@ -238,10 +279,13 @@
       bind:this={searchPanel}
       query={searchQuery}
       {searching}
+      {allTags}
+      {filters}
       resultCount={visibleEntries.length}
       elapsedMs={searchElapsedMs}
-      noResults={searchQuery.trim().length > 0 && !searching && visibleEntries.length === 0}
+      noResults={!searching && visibleEntries.length === 0 && (searchQuery.trim().length > 0 || hasActiveFilters())}
       on:queryChange={onSearchQueryChange}
+      on:filtersChange={onFiltersChange}
     />
 
     <section class="layout">
@@ -250,7 +294,7 @@
           entries={visibleEntries}
           {selectedEntryId}
           emptyMessage={
-            searchQuery.trim().length > 0
+            searchQuery.trim().length > 0 || hasActiveFilters()
               ? 'No entries matched your search.'
               : 'Write your first entry to populate the timeline.'
           }

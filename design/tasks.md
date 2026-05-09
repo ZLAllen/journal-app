@@ -84,10 +84,10 @@ This task list is based on the current implementation review against `design/mvp
 - [x] Add backend `search_entries` command.
 - [x] Implement FTS5 query over `entries.body_text`.
 - [x] Generate highlighted snippets through FTS5 `snippet()` or `highlight()`.
-- [ ] Support empty query with filters as filtered timeline results.
-- [ ] Add date range filter.
-- [ ] Add tag filter.
-- [ ] Add mood filter.
+- [x] Support empty query with filters as filtered timeline results.
+- [x] Add date range filter.
+- [x] Add tag filter.
+- [x] Add mood filter.
 - [ ] Exclude soft-deleted entries from all search and filter results.
 - [x] Replace placeholder `Search.svelte` with real search UI.
 - [x] Add no-results empty state.
@@ -240,7 +240,7 @@ Exit criteria:
 - [x] Rebuild FTS around MVP `body_text`.
 - [x] Implement backend search command.
 - [ ] Implement search UI with highlighted snippets.
-- [ ] Implement date, tag, and mood filters.
+- [x] Implement date, tag, and mood filters.
 - [ ] Implement tag management screen.
 - [ ] Implement tag rename/delete behavior in the UI.
 - [ ] Add 10,000-entry fixture generator.
