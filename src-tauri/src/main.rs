@@ -83,6 +83,16 @@ fn get_entries(state: State<'_, AppState>) -> Result<Vec<models::Entry>, AppErro
 }
 
 #[tauri::command]
+fn get_entry(id: String, state: State<'_, AppState>) -> Result<models::Entry, AppError> {
+    let db_guard = lock_db(&state)?;
+
+    match commands::entries::get_entry(&db_guard, id)? {
+        Some(entry) => Ok(entry),
+        None => Err(AppError::NotFound("Entry not found".to_string())),
+    }
+}
+
+#[tauri::command]
 fn update_entry(
     payload: UpdateEntryPayload,
     state: State<'_, AppState>,
@@ -234,6 +244,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             create_entry,
             get_entries,
+            get_entry,
             update_entry,
             delete_entry,
             set_entry_pinned,

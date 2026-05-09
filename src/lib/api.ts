@@ -53,6 +53,7 @@ export const api = {
   createEntry: (title: string, body: string, mood: number | null = null) =>
     invoke<Entry>('create_entry', { payload: { title, body, mood } }),
   getEntries: () => invoke<Entry[]>('get_entries'),
+  getEntry: (id: string) => invoke<Entry>('get_entry', { id }),
   updateEntry: (
     id: string,
     title: string,

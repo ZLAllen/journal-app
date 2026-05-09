@@ -123,3 +123,24 @@ fn integration_deleted_entries_excluded_from_search_results() {
     assert_eq!(search_results.results.len(), 1);
     assert_eq!(search_results.results[0].entry.id, keep.id);
 }
+
+#[test]
+fn integration_get_entry_returns_none_after_delete() {
+    let db = setup_db();
+
+    let entry = entries::create_entry(
+        &db,
+        "Lookup".to_string(),
+        "<p>Lookup body</p>".to_string(),
+        None,
+    )
+    .expect("create_entry should succeed");
+
+    let loaded = entries::get_entry(&db, entry.id.clone()).expect("get_entry should succeed");
+    assert!(loaded.is_some());
+
+    entries::delete_entry(&db, entry.id.clone()).expect("delete_entry should succeed");
+
+    let after_delete = entries::get_entry(&db, entry.id).expect("get_entry should succeed");
+    assert!(after_delete.is_none());
+}
