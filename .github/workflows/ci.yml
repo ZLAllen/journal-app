@@ -39,6 +39,9 @@ jobs:
       - name: Install Rustfmt and Clippy
         run: rustup component add rustfmt clippy
 
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2.0" --locked
+
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
@@ -49,6 +52,9 @@ jobs:
 
       - name: Frontend type check
         run: npm run check
+
+      - name: Frontend lint
+        run: npm run lint
 
       - name: Frontend production build
         run: npm run build
@@ -65,6 +71,7 @@ jobs:
         working-directory: src-tauri
         run: cargo test
 
-      - name: Rust build
-        working-directory: src-tauri
-        run: cargo build --release
+      - name: Tauri build (no bundle)
+        env:
+          TAURI_SKIP_SIGNING: true
+        run: cargo tauri build --no-bundle

@@ -129,8 +129,8 @@ This task list is based on the current implementation review against `design/mvp
 - [x] Add timeline first-page performance benchmark with 300ms target.
 - [x] Add 50,000-character editor performance scenario.
 - [ ] Add export performance scenario for 10,000 entries.
-- [ ] Configure CI for Rust format, clippy, unit tests, and integration tests.
-- [ ] Configure CI for frontend type check, lint, build, and Tauri build.
+- [x] Configure CI for Rust format, clippy, unit tests, and integration tests.
+- [x] Configure CI for frontend type check, lint, build, and Tauri build.
 - [ ] Configure Linux `.deb` and `.AppImage` builds.
 - [ ] Configure Windows `.msi` and `.exe` builds.
 - [ ] Complete manual QA on Linux and Windows clean machines.
